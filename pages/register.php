@@ -517,13 +517,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
     
     <!-- Footer -->
-    <footer>
-        <div class="container">
-            <div class="footer-bottom">
-                <p>&copy; <?php echo date('Y'); ?> HealthConnect. All Rights Reserved.</p>
-            </div>
-        </div>
-    </footer>
+   
     
     <!-- Footer Navigation -->
     <div class="footer-nav">
