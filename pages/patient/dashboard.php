@@ -1,0 +1,611 @@
+<?php
+require_once __DIR__ . '/../../includes/auth_check.php';
+require_once __DIR__ . '/../../includes/config/database.php';
+
+// Check if user is patient
+if ($_SESSION['role'] !== 'patient') {
+    header('Location: /connect/pages/login.php');
+    exit();
+}
+
+// Initialize variables
+$upcoming_appointments = [];
+$recent_records = [];
+$due_vaccines = [];
+$error_message = null;
+
+try {
+    $database = new Database();
+    $conn = $database->getConnection();
+
+    if (!$conn) {
+        throw new Exception("Database connection failed");
+    }
+
+    // Get patient details
+    $query = "SELECT p.*, u.* 
+              FROM patients p 
+              JOIN users u ON p.user_id = u.user_id 
+              WHERE p.user_id = :user_id";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([':user_id' => $_SESSION['user_id']]);
+    $patient = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$patient) {
+        throw new Exception("Patient record not found");
+    }
+
+    // Get counts for dashboard stats
+    $counts = [];
+    
+    // Count total appointments
+    $query = "SELECT COUNT(*) as total FROM appointments WHERE patient_id = :patient_id";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([':patient_id' => $patient['patient_id']]);
+    $counts['appointments'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Count upcoming appointments
+    $query = "SELECT COUNT(*) as total FROM appointments 
+              WHERE patient_id = :patient_id 
+              AND appointment_date >= CURDATE() 
+              AND status_id IN (1, 2)";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([':patient_id' => $patient['patient_id']]);
+    $counts['upcoming_appointments'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Count medical records (count whole records)
+    $query = "SELECT COUNT(DISTINCT record_id) as total FROM medical_records WHERE patient_id = :patient_id";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([':patient_id' => $patient['patient_id']]);
+    $counts['medical_records'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Count completed immunizations
+    $query = "SELECT COUNT(DISTINCT immunization_record_id) as total FROM immunization_records WHERE patient_id = :patient_id";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([':patient_id' => $patient['patient_id']]);
+    $counts['immunizations'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Get upcoming appointments
+    $query = "SELECT a.*, 
+              CONCAT(h_u.first_name, ' ', h_u.last_name) as health_worker_name,
+              hw.position as health_worker_position,
+              s.status_name
+              FROM appointments a
+              JOIN health_workers hw ON a.health_worker_id = hw.health_worker_id
+              JOIN users h_u ON hw.user_id = h_u.user_id
+              JOIN appointment_status s ON a.status_id = s.status_id
+              WHERE a.patient_id = :patient_id 
+              AND a.appointment_date >= CURDATE()
+              AND a.status_id IN (1, 2)
+              ORDER BY a.appointment_date ASC, a.appointment_time ASC
+              LIMIT 3";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([':patient_id' => $patient['patient_id']]);
+    $upcoming_appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get recent medical records
+    $query = "SELECT m.*, 
+              CONCAT(h_u.first_name, ' ', h_u.last_name) as health_worker_name,
+              hw.position as health_worker_position
+              FROM medical_records m
+              JOIN health_workers hw ON m.health_worker_id = hw.health_worker_id
+              JOIN users h_u ON hw.user_id = h_u.user_id
+              WHERE m.patient_id = :patient_id
+              ORDER BY m.visit_date DESC
+              LIMIT 3";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([':patient_id' => $patient['patient_id']]);
+    $recent_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get due vaccines
+    $query = "SELECT it.*, 
+              (SELECT COUNT(*) FROM immunization_records ir 
+               WHERE ir.immunization_type_id = it.immunization_type_id 
+               AND ir.patient_id = :patient_id) as doses_received,
+              it.dose_count as doses_required,
+              (SELECT MAX(date_administered) FROM immunization_records ir 
+               WHERE ir.immunization_type_id = it.immunization_type_id 
+               AND ir.patient_id = :patient_id) as last_dose_date
+              FROM immunization_types it 
+              WHERE it.dose_count > (
+                SELECT COUNT(*) FROM immunization_records ir 
+                WHERE ir.immunization_type_id = it.immunization_type_id 
+                AND ir.patient_id = :patient_id
+              )
+              ORDER BY it.recommended_age ASC
+              LIMIT 3";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([':patient_id' => $patient['patient_id']]);
+    $due_vaccines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
+    error_log("Database error in patient dashboard: " . $e->getMessage());
+    $error_message = "Database error: " . $e->getMessage();
+} catch (Exception $e) {
+    error_log("Error in patient dashboard: " . $e->getMessage());
+    $error_message = $e->getMessage();
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - HealthConnect</title>
+    <?php include __DIR__ . '/../../includes/header_links.php'; ?>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            margin: 20px 0;
+            height: 300px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .activity-list-container {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #4a90e2 #f0f0f0;
+        }
+
+        .activity-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .activity-list-container::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 3px;
+        }
+
+        .activity-list-container::-webkit-scrollbar-thumb {
+            background-color: #4a90e2;
+            border-radius: 3px;
+        }
+
+        .activity-list {
+            padding-right: 10px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .view-all-btn {
+            padding: 6px 12px;
+            background: #f8f9fa;
+            color: #4a90e2;
+            border-radius: 5px;
+            font-size: 0.9em;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+
+        .view-all-btn:hover {
+            background: #e3f2fd;
+            color: #1976d2;
+            text-decoration: none;
+        }
+
+        .view-all-btn i {
+            font-size: 0.8em;
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        @media (min-width: 992px) {
+            .charts-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .chart-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card i {
+            font-size: 2em;
+            color: #4a90e2;
+            margin-bottom: 10px;
+        }
+
+        .stat-card h3 {
+            font-size: 1em;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .stat-card p {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+
+        .recent-activity {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .activity-list {
+            margin-top: 20px;
+        }
+
+        .activity-item {
+            display: flex;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            background: #e3f2fd;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: #1976d2;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .activity-time {
+            font-size: 0.9em;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .status-badge.scheduled {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-badge.confirmed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-badge.completed {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .status-badge.cancelled {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .action-button {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s ease;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .action-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: #4a90e2;
+            text-decoration: none;
+            color: #4a90e2;
+        }
+
+        .action-icon {
+            width: 50px;
+            height: 50px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .action-button:hover .action-icon {
+            background: #e3f2fd;
+        }
+
+        .action-icon i {
+            font-size: 1.5em;
+            color: #4a90e2;
+        }
+
+        .action-content {
+            flex: 1;
+        }
+
+        .action-title {
+            font-size: 1.1em;
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .action-description {
+            font-size: 0.9em;
+            color: #666;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <?php include __DIR__ . '/../../includes/navbar.php'; ?>
+
+    <div class="container">
+        <?php if (isset($error_message)): ?>
+        <div class="alert alert-danger">
+            <?php echo $error_message; ?>
+        </div>
+        <?php endif; ?>
+
+        <div class="dashboard-header">
+            <h1>Patient Dashboard</h1>
+            <div class="date-display">
+                <?php echo date('l, F j, Y'); ?>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="fas fa-calendar-check"></i>
+                <h3>Appointments</h3>
+                <p><?php echo number_format($counts['appointments']); ?></p>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-calendar-day"></i>
+                <h3>Upcoming</h3>
+                <p><?php echo number_format($counts['upcoming_appointments']); ?></p>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-notes-medical"></i>
+                <h3>Medical Records</h3>
+                <p><?php echo number_format($counts['medical_records']); ?></p>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-syringe"></i>
+                <h3>Immunizations</h3>
+                <p><?php echo number_format($counts['immunizations']); ?></p>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="recent-activity">
+            <h2>Quick Actions</h2>
+            <div class="quick-actions">
+                <a href="schedule_appointment.php" class="action-button">
+                    <div class="action-icon">
+                        <i class="fas fa-calendar-plus"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Schedule Appointment</span>
+                        <span class="action-description">Book a new appointment with a health worker</span>
+                    </div>
+                </a>
+                <a href="medical_history.php" class="action-button">
+                    <div class="action-icon">
+                        <i class="fas fa-notes-medical"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Medical Records</span>
+                        <span class="action-description">View your complete medical history</span>
+                    </div>
+                </a>
+                <a href="immunization.php" class="action-button">
+                    <div class="action-icon">
+                        <i class="fas fa-syringe"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Immunizations</span>
+                        <span class="action-description">Track your vaccination records</span>
+                    </div>
+                </a>
+                <a href="appointments.php" class="action-button">
+                    <div class="action-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">My Appointments</span>
+                        <span class="action-description">Manage your scheduled appointments</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+            <!-- Upcoming Appointments -->
+        <div class="recent-activity">
+            <h2>Upcoming Appointments</h2>
+            <div class="activity-list">
+                <?php if (!empty($upcoming_appointments)): ?>
+                    <?php foreach ($upcoming_appointments as $appointment): ?>
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-title">
+                                    Appointment with <?php echo htmlspecialchars($appointment['health_worker_name']); ?>
+                                </div>
+                                <div class="activity-time">
+                                    <?php 
+                                        $date = new DateTime($appointment['appointment_date'] . ' ' . $appointment['appointment_time']);
+                                        echo $date->format('F j, Y \a\t g:i A');
+                                    ?>
+                                    <span class="status-badge <?php echo strtolower($appointment['status_name']); ?>">
+                                        <?php echo ucfirst($appointment['status_name']); ?>
+                                </span>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="no-activity">
+                        <p>No upcoming appointments</p>
+                        <a href="schedule_appointment.php" class="btn">Schedule Now</a>
+                    </div>
+                <?php endif; ?>
+            </div>
+            </div>
+
+        <!-- Charts Section -->
+        <div class="charts-grid">
+            <!-- Recent Medical Records -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">Recent Medical Records</h3>
+                    <a href="medical_history.php" class="view-all-btn">
+                        View All <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+                <?php if (empty($recent_records)): ?>
+                    <p class="text-muted">No recent medical records</p>
+                <?php else: ?>
+                    <div class="activity-list-container">
+                        <div class="activity-list">
+                        <?php foreach ($recent_records as $record): ?>
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="fas fa-notes-medical"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">
+                                        <?php echo htmlspecialchars($record['diagnosis']); ?>
+                                    </div>
+                                    <div class="activity-time">
+                                        <?php echo date('F j, Y', strtotime($record['visit_date'])); ?>
+                                        <span>By <?php echo htmlspecialchars($record['health_worker_name']); ?></span>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Due Vaccines -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">Due Vaccines</h3>
+                    <a href="immunization.php" class="view-all-btn">
+                        View All <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+                <?php if (empty($due_vaccines)): ?>
+                    <p class="text-muted">All vaccines are up to date!</p>
+                <?php else: ?>
+                    <div class="activity-list-container">
+                        <div class="activity-list">
+                        <?php foreach ($due_vaccines as $vaccine): ?>
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="fas fa-syringe"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">
+                                        <?php echo htmlspecialchars($vaccine['name']); ?>
+                                    </div>
+                                    <div class="activity-time">
+                                        <?php
+                                        $doses_received = (int)($vaccine['doses_received'] ?? 0);
+                                        $doses_required = (int)($vaccine['doses_required'] ?? 0);
+                                        ?>
+                                        Progress: <?php echo $doses_received; ?>/<?php echo $doses_required; ?> doses
+                                        <?php if ($vaccine['last_dose_date']): ?>
+                                            <span>Last dose: <?php echo date('M j, Y', strtotime($vaccine['last_dose_date'])); ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <?php include __DIR__ . '/../../includes/footer.php'; ?>
+</body>
+</html> 

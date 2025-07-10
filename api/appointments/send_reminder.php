@@ -1,0 +1,185 @@
+<?php
+// Ensure no output before headers
+ob_start();
+
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
+// Set JSON content type immediately
+header('Content-Type: application/json');
+
+// Custom error handler
+function handleError($errno, $errstr, $errfile, $errline) {
+    error_log("PHP Error in send_reminder.php: [$errno] $errstr in $errfile on line $errline");
+    $error = [
+        'success' => false,
+        'message' => 'A system error occurred. Please try again later.',
+        'debug_info' => [
+            'error_type' => $errno,
+            'error_message' => $errstr,
+            'file' => basename($errfile),
+            'line' => $errline
+        ]
+    ];
+    ob_clean();
+    echo json_encode($error);
+    exit;
+}
+set_error_handler('handleError');
+
+// Function to log detailed debug information
+function logDebug($message, $data = null) {
+    $log = date('Y-m-d H:i:s') . " [send_reminder.php] $message";
+    if ($data !== null) {
+        $log .= "\nData: " . print_r($data, true);
+    }
+    error_log($log);
+}
+
+try {
+    // Check if session is active
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    logDebug("Session status check completed", ['session_id' => session_id(), 'user_id' => $_SESSION['user_id'] ?? 'not set']);
+
+    // Check if user is logged in
+    if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
+        logDebug("Session validation failed", $_SESSION);
+        ob_clean();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Session expired. Please refresh the page and login again.'
+        ]);
+        exit;
+    }
+
+    require_once __DIR__ . '/../../includes/config/database.php';
+    require_once __DIR__ . '/../../includes/sms.php';
+
+    // Check if user is health worker
+    if ($_SESSION['role'] !== 'health_worker') {
+        logDebug("Unauthorized access attempt", ['role' => $_SESSION['role']]);
+        ob_clean();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Unauthorized access. Please login as a health worker.'
+        ]);
+        exit;
+    }
+
+    // Check if it's a POST request
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        logDebug("Invalid request method", ['method' => $_SERVER['REQUEST_METHOD']]);
+        ob_clean();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid request method. Only POST requests are allowed.'
+        ]);
+        exit;
+    }
+
+    // Get and validate JSON data
+    $raw_input = file_get_contents('php://input');
+    logDebug("Received raw input", ['input' => $raw_input]);
+
+    if (empty($raw_input)) {
+        ob_clean();
+        echo json_encode([
+            'success' => false,
+            'message' => 'No data received. Please try again.'
+        ]);
+        exit;
+    }
+
+    $data = json_decode($raw_input, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        logDebug("JSON decode error", ['error' => json_last_error_msg()]);
+        ob_clean();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid JSON data: ' . json_last_error_msg()
+        ]);
+        exit;
+    }
+
+    logDebug("Parsed JSON data", $data);
+
+    if (!isset($data['appointment_id'])) {
+        logDebug("Missing required parameters", $data);
+        ob_clean();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Missing required parameter: appointment_id is required.'
+        ]);
+        exit;
+    }
+
+    // Initialize database connection
+    $database = new Database();
+    $pdo = $database->getConnection();
+    
+    // Check if SMS was already sent
+    $query = "SELECT a.sms_notification_sent, 
+                     u.first_name, u.last_name,
+                     a.appointment_date, a.appointment_time
+              FROM appointments a
+              JOIN patients p ON a.patient_id = p.patient_id
+              JOIN users u ON p.user_id = u.user_id
+              WHERE a.appointment_id = ?";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$data['appointment_id']]);
+    $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$appointment) {
+        logDebug("Appointment not found", [
+            'appointment_id' => $data['appointment_id']
+        ]);
+        ob_clean();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Appointment not found.'
+        ]);
+        exit;
+    }
+
+    if ($appointment['sms_notification_sent']) {
+        logDebug("SMS notification was already sent for this appointment", [
+            'appointment_id' => $data['appointment_id']
+        ]);
+        ob_clean();
+        echo json_encode([
+            'success' => false,
+            'message' => 'SMS notification was already sent for this appointment'
+        ]);
+        exit;
+    }
+
+    // If SMS hasn't been sent, redirect to update_status.php
+    ob_clean();
+    echo json_encode([
+        'success' => false,
+        'message' => 'Please update the appointment status to "Confirmed" to send the SMS notification.'
+    ]);
+
+} catch (PDOException $e) {
+    logDebug("Database error", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+    ob_clean();
+    echo json_encode([
+        'success' => false,
+        'message' => 'Database error occurred. Please try again later.'
+    ]);
+} catch (Exception $e) {
+    logDebug("General error", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+    ob_clean();
+    echo json_encode([
+        'success' => false,
+        'message' => 'An unexpected error occurred. Please try again later.'
+    ]);
+}
+
+// Ensure we send the output
+ob_end_flush();
+?> 

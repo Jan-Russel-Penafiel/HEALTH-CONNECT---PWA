@@ -1,0 +1,23 @@
+{
+  "name": "HealthConnect",
+  "short_name": "HealthConnect",
+  "description": "Smart Mobile Application For Brgy. Health Center of Brgy. Poblacion President Quirino Sultan Kudarat",
+  "start_url": "/connect/index.php",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4CAF50",
+  "icons": [
+    {
+      "src": "/connect/assets/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/connect/assets/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+} 
