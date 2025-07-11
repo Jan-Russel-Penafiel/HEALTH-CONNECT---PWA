@@ -151,7 +151,7 @@ try {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .section-title {
@@ -160,29 +160,12 @@ try {
             margin: 0;
         }
 
-        .records-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .records-table th,
-        .records-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-
-        .records-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #666;
-        }
-
         .status-badge {
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: 500;
+            display: inline-block;
         }
 
         .status-scheduled { background: #e3f2fd; color: #1976d2; }
@@ -207,8 +190,88 @@ try {
             background: #e4e4e4;
         }
 
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .record-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px;
+            transition: transform 0.2s;
+        }
+
+        .record-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+            color: #333;
+        }
+
+        .card-subtitle {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0 0;
+        }
+
+        .card-body {
+            padding: 5px 0;
+        }
+
+        .card-item {
+            margin-bottom: 8px;
+            display: flex;
+        }
+
+        .card-item-label {
+            font-weight: 600;
+            color: #666;
+            width: 100px;
+            flex-shrink: 0;
+        }
+
+        .card-item-value {
+            color: #333;
+            flex-grow: 1;
+        }
+
+        .card-footer {
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 2em;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+
         @media (max-width: 768px) {
-            .info-grid {
+            .info-grid, .cards-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -300,44 +363,51 @@ try {
                 <h3 class="section-title">Recent Appointments</h3>
                 <a href="../health_worker/appointments.php?patient_id=<?php echo $patient['patient_id']; ?>" class="btn btn-sm btn-primary">View All</a>
             </div>
-            <table class="records-table">
-                <thead>
-                    <tr>
-                        <th>Date & Time</th>
-                        <th>Health Worker</th>
-                        <th>Reason</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($recent_appointments)): ?>
-                        <?php foreach ($recent_appointments as $appointment): ?>
-                            <tr>
-                                <td>
-                                    <?php 
-                                        echo date('M d, Y', strtotime($appointment['appointment_date'])) . '<br>';
-                                        echo date('h:i A', strtotime($appointment['appointment_time']));
-                                    ?>
-                                </td>
-                                <td>
-                                    <?php echo htmlspecialchars($appointment['health_worker_name']); ?><br>
-                                    <small><?php echo htmlspecialchars($appointment['position']); ?></small>
-                                </td>
-                                <td><?php echo htmlspecialchars($appointment['reason']); ?></td>
-                                <td>
-                                    <span class="status-badge status-<?php echo strtolower($appointment['status_name']); ?>">
-                                        <?php echo htmlspecialchars($appointment['status_name']); ?>
-                                    </span>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="4" class="text-center">No appointments found</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+            
+            <?php if (!empty($recent_appointments)): ?>
+                <div class="cards-grid">
+                    <?php foreach ($recent_appointments as $appointment): ?>
+                        <div class="record-card">
+                            <div class="card-header">
+                                <h4 class="card-title">
+                                    <i class="fas fa-calendar-check"></i> 
+                                    <?php echo date('M d, Y', strtotime($appointment['appointment_date'])); ?>
+                                </h4>
+                                <p class="card-subtitle">
+                                    <i class="fas fa-clock"></i> 
+                                    <?php echo date('h:i A', strtotime($appointment['appointment_time'])); ?>
+                                </p>
+                            </div>
+                            <div class="card-body">
+                                <div class="card-item">
+                                    <div class="card-item-label">Health Worker:</div>
+                                    <div class="card-item-value">
+                                        <?php echo htmlspecialchars($appointment['health_worker_name']); ?>
+                                        <div><small><?php echo htmlspecialchars($appointment['position']); ?></small></div>
+                                    </div>
+                                </div>
+                                <?php if (!empty($appointment['reason'])): ?>
+                                <div class="card-item">
+                                    <div class="card-item-label">Reason:</div>
+                                    <div class="card-item-value"><?php echo htmlspecialchars($appointment['reason']); ?></div>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="card-footer">
+                                <span class="status-badge status-<?php echo strtolower($appointment['status_name']); ?>">
+                                    <?php echo htmlspecialchars($appointment['status_name']); ?>
+                                </span>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <h4>No Appointments Found</h4>
+                    <p>This patient has no appointment records.</p>
+                </div>
+            <?php endif; ?>
         </div>
 
         <!-- Immunization Records -->
@@ -346,41 +416,58 @@ try {
                 <h3 class="section-title">Recent Immunizations</h3>
                 <a href="../health_worker/immunization.php?patient_id=<?php echo $patient['patient_id']; ?>" class="btn btn-sm btn-primary">View All</a>
             </div>
-            <table class="records-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Immunization</th>
-                        <th>Health Worker</th>
-                        <th>Next Schedule</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($immunization_records)): ?>
-                        <?php foreach ($immunization_records as $record): ?>
-                            <tr>
-                                <td><?php echo date('M d, Y', strtotime($record['date_administered'])); ?></td>
-                                <td>
-                                    <?php echo htmlspecialchars($record['immunization_name']); ?><br>
-                                    <small>Dose <?php echo htmlspecialchars($record['dose_number']); ?></small>
-                                </td>
-                                <td><?php echo htmlspecialchars($record['health_worker_name']); ?></td>
-                                <td>
-                                    <?php 
-                                        echo $record['next_schedule_date'] 
-                                            ? date('M d, Y', strtotime($record['next_schedule_date']))
-                                            : 'Not scheduled';
-                                    ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="4" class="text-center">No immunization records found</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+            
+            <?php if (!empty($immunization_records)): ?>
+                <div class="cards-grid">
+                    <?php foreach ($immunization_records as $record): ?>
+                        <div class="record-card">
+                            <div class="card-header">
+                                <h4 class="card-title">
+                                    <i class="fas fa-syringe"></i> 
+                                    <?php echo htmlspecialchars($record['immunization_name']); ?>
+                                </h4>
+                                <p class="card-subtitle">
+                                    Dose <?php echo htmlspecialchars($record['dose_number']); ?>
+                                </p>
+                            </div>
+                            <div class="card-body">
+                                <div class="card-item">
+                                    <div class="card-item-label">Date:</div>
+                                    <div class="card-item-value">
+                                        <?php echo date('M d, Y', strtotime($record['date_administered'])); ?>
+                                    </div>
+                                </div>
+                                <div class="card-item">
+                                    <div class="card-item-label">Health Worker:</div>
+                                    <div class="card-item-value"><?php echo htmlspecialchars($record['health_worker_name']); ?></div>
+                                </div>
+                                <?php if (!empty($record['notes'])): ?>
+                                <div class="card-item">
+                                    <div class="card-item-label">Notes:</div>
+                                    <div class="card-item-value"><?php echo htmlspecialchars($record['notes']); ?></div>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="card-footer">
+                                <?php if ($record['next_schedule_date']): ?>
+                                    <span>
+                                        <i class="fas fa-calendar-alt"></i> 
+                                        Next: <?php echo date('M d, Y', strtotime($record['next_schedule_date'])); ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span>No follow-up scheduled</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="empty-state">
+                    <i class="fas fa-notes-medical"></i>
+                    <h4>No Immunization Records Found</h4>
+                    <p>This patient has no immunization records.</p>
+                </div>
+            <?php endif; ?>
         </div>
 
         <!-- Medical Records -->
@@ -389,41 +476,57 @@ try {
                 <h3 class="section-title">Recent Medical Records</h3>
                 <a href="../health_worker/medical_history.php?patient_id=<?php echo $patient['patient_id']; ?>" class="btn btn-sm btn-primary">View All</a>
             </div>
-            <table class="records-table">
-                <thead>
-                    <tr>
-                        <th>Visit Date</th>
-                        <th>Health Worker</th>
-                        <th>Diagnosis</th>
-                        <th>Follow-up</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($medical_records)): ?>
-                        <?php foreach ($medical_records as $record): ?>
-                            <tr>
-                                <td><?php echo date('M d, Y', strtotime($record['visit_date'])); ?></td>
-                                <td><?php echo htmlspecialchars($record['health_worker_name']); ?></td>
-                                <td>
-                                    <strong>Complaint:</strong> <?php echo htmlspecialchars($record['chief_complaint']); ?><br>
-                                    <strong>Diagnosis:</strong> <?php echo htmlspecialchars($record['diagnosis']); ?>
-                                </td>
-                                <td>
-                                    <?php 
-                                        echo $record['follow_up_date'] 
-                                            ? date('M d, Y', strtotime($record['follow_up_date']))
-                                            : 'Not scheduled';
-                                    ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="4" class="text-center">No medical records found</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+            
+            <?php if (!empty($medical_records)): ?>
+                <div class="cards-grid">
+                    <?php foreach ($medical_records as $record): ?>
+                        <div class="record-card">
+                            <div class="card-header">
+                                <h4 class="card-title">
+                                    <i class="fas fa-file-medical"></i> 
+                                    Visit: <?php echo date('M d, Y', strtotime($record['visit_date'])); ?>
+                                </h4>
+                                <p class="card-subtitle">
+                                    <i class="fas fa-user-md"></i> 
+                                    <?php echo htmlspecialchars($record['health_worker_name']); ?>
+                                </p>
+                            </div>
+                            <div class="card-body">
+                                <div class="card-item">
+                                    <div class="card-item-label">Complaint:</div>
+                                    <div class="card-item-value"><?php echo htmlspecialchars($record['chief_complaint']); ?></div>
+                                </div>
+                                <div class="card-item">
+                                    <div class="card-item-label">Diagnosis:</div>
+                                    <div class="card-item-value"><?php echo htmlspecialchars($record['diagnosis']); ?></div>
+                                </div>
+                                <?php if (!empty($record['treatment'])): ?>
+                                <div class="card-item">
+                                    <div class="card-item-label">Treatment:</div>
+                                    <div class="card-item-value"><?php echo htmlspecialchars($record['treatment']); ?></div>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="card-footer">
+                                <?php if ($record['follow_up_date']): ?>
+                                    <span>
+                                        <i class="fas fa-calendar-plus"></i> 
+                                        Follow-up: <?php echo date('M d, Y', strtotime($record['follow_up_date'])); ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span>No follow-up scheduled</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h4>No Medical Records Found</h4>
+                    <p>This patient has no medical records.</p>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </body>

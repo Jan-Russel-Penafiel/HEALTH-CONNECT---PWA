@@ -423,6 +423,197 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
             color: #4a90e2;
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 3% auto;
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            max-width: 800px;
+            width: 90%;
+            position: relative;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background-color: #28a745;
+            color: white;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .modal-header .modal-title {
+            margin: 0;
+            color: white;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            transition: color 0.2s;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(90vh - 130px);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 15px;
+            border-top: 1px solid #eee;
+            background-color: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.95em;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: #4a90e2;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+        
+        .section-divider {
+            margin: 20px 0 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+        
+        .section-divider h4 {
+            color: #2c3e50;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1em;
+        }
+        
+        .section-divider h4 i {
+            color: #4a90e2;
+        }
+        
+        .emergency-contact-grid {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .address-group {
+            grid-column: span 3;
+        }
+        
+        /* Modal Button Styles */
+        .modal-footer .btn {
+            padding: 6px 12px;
+            font-weight: 500;
+            min-width: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.2s;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .modal-footer .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+        
+        .modal-footer .btn-success:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+        
+        .modal-footer .btn-secondary {
+            color: #6c757d;
+            border-color: #6c757d;
+            background-color: #f8f9fa;
+        }
+        
+        .modal-footer .btn-secondary:hover {
+            color: #5a6268;
+            background-color: #e2e6ea;
+            border-color: #6c757d;
+        }
+        
+        .modal-footer .btn-outline-secondary {
+            color: #6c757d;
+            border-color: #6c757d;
+            background-color: transparent;
+        }
+        
+        .modal-footer .btn-outline-secondary:hover {
+            color: #fff;
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+
         @media (max-width: 768px) {
             .page-header {
                 flex-direction: column;
@@ -445,6 +636,59 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
             .patients-grid {
                 grid-template-columns: 1fr;
             }
+            
+            /* Improved Mobile Modal Styles */
+            .modal-content {
+                margin: 5% auto;
+                width: 95%;
+                max-height: 85vh;
+            }
+            
+            .modal-body {
+                max-height: calc(85vh - 130px);
+                padding: 15px;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .form-group {
+                margin-bottom: 12px;
+            }
+            
+            .address-group {
+                grid-column: span 1;
+            }
+            
+            .section-divider {
+                margin: 15px 0 10px;
+            }
+            
+            .modal-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                padding: 12px 15px;
+            }
+            
+            .modal-footer .btn {
+                flex: 1;
+                min-width: 0;
+                padding: 6px 10px;
+                font-size: 0.8em;
+            }
+        }
+        
+        /* Additional Media Query for Medium Screens */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .form-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .address-group {
+                grid-column: span 2;
+            }
         }
     </style>
 </head>
@@ -462,9 +706,7 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <button class="btn btn-primary" onclick="showAddPatientModal()">
                     <i class="fas fa-user-plus"></i> Add Patient
                 </button>
-                <button class="btn btn-primary" onclick="showAddRecordModal()">
-                    <i class="fas fa-plus"></i> Add Medical Record
-                </button>
+                
             </div>
         </div>
 
@@ -587,9 +829,9 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
 
                         <div class="actions">
-                            <button class="btn-action btn-view" onclick="viewMedicalHistory(<?php echo $patient['patient_id']; ?>)">
+                            <a href="view_medical_history.php?patient_id=<?php echo $patient['patient_id']; ?>" class="btn-action btn-view">
                                 <i class="fas fa-history"></i> History
-                            </button>
+                            </a>
                             <button class="btn-action btn-edit" onclick="showAddRecordModal(<?php echo $patient['patient_id']; ?>)">
                                 <i class="fas fa-plus"></i> Add Record
                             </button>
@@ -604,8 +846,10 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div id="recordModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Add Medical Record</h3>
-                <span class="modal-close">&times;</span>
+                <h3 class="modal-title"><i class="fas fa-notes-medical"></i> Add Medical Record</h3>
+                <button type="button" class="modal-close" onclick="closeModal('recordModal')">
+                    <span>&times;</span>
+                </button>
             </div>
             <form id="recordForm" method="POST">
                 <div class="modal-body">
@@ -648,66 +892,52 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Save Medical Record</button>
                     <button type="button" class="btn btn-secondary" onclick="closeModal('recordModal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save fa-sm"></i> Save Record
+                    </button>
                 </div>
             </form>
         </div>
     </div>
     
-    <!-- Medical History Modal -->
-    <div id="historyModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Medical History</h3>
-                <span class="modal-close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div id="medicalHistory"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('historyModal')">Close</button>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Add Patient Modal -->
     <div id="addPatientModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Add New Patient</h3>
-                <span class="modal-close">&times;</span>
+                <h3 class="modal-title"><i class="fas fa-user-plus"></i> Add New Patient</h3>
+                <button type="button" class="modal-close" onclick="closeModal('addPatientModal')">
+                    <span>&times;</span>
+                </button>
             </div>
             <form method="POST" id="addPatientForm">
                 <div class="modal-body">
                     <input type="hidden" name="action" value="add_patient">
                     
+                    <div class="section-divider">
+                        <h4><i class="fas fa-user"></i> Personal Information</h4>
+                    </div>
+                    
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="first_name">First Name</label>
-                            <input type="text" id="first_name" name="first_name" class="form-control" required>
+                            <input type="text" id="first_name" name="first_name" class="form-control" required placeholder="First name">
                         </div>
 
                         <div class="form-group">
                             <label for="middle_name">Middle Name</label>
-                            <input type="text" id="middle_name" name="middle_name" class="form-control">
+                            <input type="text" id="middle_name" name="middle_name" class="form-control" placeholder="Middle name (optional)">
                         </div>
 
                         <div class="form-group">
                             <label for="last_name">Last Name</label>
-                            <input type="text" id="last_name" name="last_name" class="form-control" required>
+                            <input type="text" id="last_name" name="last_name" class="form-control" required placeholder="Last name">
                         </div>
-
-                        <div class="form-group">
-                            <label for="email">Email</label>
-                            <input type="email" id="email" name="email" class="form-control" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="mobile_number">Mobile Number</label>
-                            <input type="tel" id="mobile_number" name="mobile_number" class="form-control" required>
-                        </div>
-
+                    </div>
+                    
+                    <div class="form-grid">
                         <div class="form-group">
                             <label for="gender">Gender</label>
                             <select id="gender" name="gender" class="form-control" required>
@@ -722,7 +952,7 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <label for="date_of_birth">Date of Birth</label>
                             <input type="date" id="date_of_birth" name="date_of_birth" class="form-control" required>
                         </div>
-
+                        
                         <div class="form-group">
                             <label for="blood_type">Blood Type</label>
                             <select id="blood_type" name="blood_type" class="form-control">
@@ -737,44 +967,74 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <option value="O-">O-</option>
                             </select>
                         </div>
+                    </div>
+                    
+                    <div class="section-divider">
+                        <h4><i class="fas fa-id-card"></i> Contact Information</h4>
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" class="form-control" required placeholder="Email address">
+                        </div>
 
                         <div class="form-group">
+                            <label for="mobile_number">Mobile Number</label>
+                            <input type="tel" id="mobile_number" name="mobile_number" class="form-control" required placeholder="Phone number">
+                        </div>
+                        
+                        <div class="form-group address-group">
+                            <label for="address">Address</label>
+                            <textarea id="address" name="address" class="form-control" rows="2" required placeholder="Full address"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="section-divider">
+                        <h4><i class="fas fa-weight"></i> Physical Details</h4>
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
                             <label for="height">Height (cm)</label>
-                            <input type="number" id="height" name="height" class="form-control" step="0.01">
+                            <input type="number" id="height" name="height" class="form-control" step="0.01" placeholder="Height in cm">
                         </div>
 
                         <div class="form-group">
                             <label for="weight">Weight (kg)</label>
-                            <input type="number" id="weight" name="weight" class="form-control" step="0.01">
+                            <input type="number" id="weight" name="weight" class="form-control" step="0.01" placeholder="Weight in kg">
                         </div>
+                        
+                        <div class="form-group"></div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="address">Address</label>
-                        <textarea id="address" name="address" class="form-control" rows="2" required></textarea>
+                    <div class="section-divider">
+                        <h4><i class="fas fa-ambulance"></i> Emergency Contact</h4>
                     </div>
-
-                    <h4>Emergency Contact</h4>
-                    <div class="form-grid">
+                    <div class="form-grid emergency-contact-grid">
                         <div class="form-group">
                             <label for="emergency_contact_name">Contact Name</label>
-                            <input type="text" id="emergency_contact_name" name="emergency_contact_name" class="form-control" required>
+                            <input type="text" id="emergency_contact_name" name="emergency_contact_name" class="form-control" required placeholder="Full name">
                         </div>
 
                         <div class="form-group">
                             <label for="emergency_contact_number">Contact Number</label>
-                            <input type="tel" id="emergency_contact_number" name="emergency_contact_number" class="form-control" required>
+                            <input type="tel" id="emergency_contact_number" name="emergency_contact_number" class="form-control" required placeholder="Phone number">
                         </div>
 
                         <div class="form-group">
                             <label for="emergency_contact_relationship">Relationship</label>
-                            <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" class="form-control" required>
+                            <input type="text" id="emergency_contact_relationship" name="emergency_contact_relationship" class="form-control" required placeholder="e.g. Spouse, Parent">
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Add Patient</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('addPatientModal')">Cancel</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="closeModal('addPatientModal')">
+                        <i class="fas fa-times fa-sm"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-user-plus fa-sm"></i> Add Patient
+                    </button>
                 </div>
             </form>
         </div>
@@ -798,90 +1058,7 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById(modalId).style.display = 'none';
         }
         
-        async function viewMedicalHistory(patientId) {
-            try {
-                const response = await fetch(`medical_history.php?patient_id=${patientId}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                let historyHtml = '<div class="medical-timeline">';
-                
-                if (data.length === 0) {
-                    historyHtml += `
-                        <div class="timeline-item" style="text-align: center;">
-                            <i class="fas fa-file-medical" style="font-size: 3em; color: #ccc; margin-bottom: 15px;"></i>
-                            <p style="color: #666;">No medical history records found for this patient.</p>
-                        </div>`;
-                } else {
-                    data.forEach(record => {
-                        historyHtml += `
-                            <div class="timeline-item">
-                                <div class="timeline-date">
-                                    <i class="fas fa-calendar-alt"></i> 
-                                    ${new Date(record.visit_date).toLocaleDateString('en-US', {
-                                        weekday: 'long',
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric'
-                                    })}
-                                </div>
-                                <div class="timeline-content">
-                                    <h4><i class="fas fa-comment-medical"></i> Chief Complaint</h4>
-                                    <p>${record.chief_complaint}</p>
 
-                                    <h4><i class="fas fa-stethoscope"></i> Diagnosis</h4>
-                                    <p>${record.diagnosis}</p>
-
-                                    <h4><i class="fas fa-procedures"></i> Treatment</h4>
-                                    <p>${record.treatment}</p>
-
-                                    ${record.prescription ? `
-                                        <h4><i class="fas fa-prescription"></i> Prescription</h4>
-                                        <p>${record.prescription}</p>
-                                    ` : ''}
-
-                                    ${record.notes ? `
-                                        <h4><i class="fas fa-notes-medical"></i> Notes</h4>
-                                        <p>${record.notes}</p>
-                                    ` : ''}
-
-                                    <div class="metadata">
-                                        ${record.follow_up_date ? `
-                                            <div class="metadata-item">
-                                                <i class="fas fa-calendar-check"></i>
-                                                Follow-up: ${new Date(record.follow_up_date).toLocaleDateString('en-US', {
-                                                    year: 'numeric',
-                                                    month: 'long',
-                                                    day: 'numeric'
-                                                })}
-                                            </div>
-                                        ` : ''}
-                                        <div class="metadata-item">
-                                            <i class="fas fa-clock"></i>
-                                            ${new Date(record.visit_date).toLocaleTimeString('en-US', {
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-                
-                historyHtml += '</div>';
-                
-                document.getElementById('medicalHistory').innerHTML = historyHtml;
-                document.getElementById('historyModal').style.display = 'block';
-            } catch (error) {
-                console.error('Error fetching medical history:', error);
-                alert('Error loading medical history. Please try again.');
-            }
-        }
         
         // Close modals when clicking outside
         window.onclick = function(event) {
@@ -893,16 +1070,7 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
         }
 
-        // Close modals when clicking on X
-        const closeButtons = document.getElementsByClassName('modal-close');
-        for (let button of closeButtons) {
-            button.onclick = function() {
-                const modal = this.closest('.modal');
-                if (modal) {
-                    modal.style.display = 'none';
-                }
-            }
-        }
+        // We're now using onclick="closeModal()" directly on the buttons
 
         // Form validation
         document.getElementById('addPatientForm').addEventListener('submit', function(e) {

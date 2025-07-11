@@ -339,32 +339,68 @@ try {
             color: white;
         }
         
-        #qrModal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
+        /* QR Scanner Modal Styles */
+        #qrScannerModal {
+            z-index: 1050;
         }
         
-        #qrModal .modal-content {
+        #qrScannerModal .modal-content {
             max-width: 500px;
-            width: 90%;
+            width: 95%;
+            margin: 1rem auto;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+                 #qrScannerModal .modal-header {
+            background-color: #28a745;
+            color: white;
+            border-bottom: none;
+            padding: 0.75rem 1rem;
+        }
+        
+        #qrScannerModal .modal-close {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.5rem;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        
+        #qrScannerModal .modal-close:hover {
+            color: white;
+        }
+        
+                 #qrScannerModal .modal-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+            margin: 0;
+            color: white;
+        }
+        
+        #qrScannerModal .modal-body {
+            padding: 1rem;
+        }
+        
+        #qrScannerModal .modal-footer {
+            border-top: none;
+            padding: 0.75rem 1rem 1rem;
         }
         
         #qrVideo {
             width: 100%;
-            border-radius: 4px;
-            margin: 1rem 0;
+            border-radius: 8px;
+            margin: 0;
+            background-color: #f1f1f1;
         }
         
         #qrResult {
             margin: 1rem 0;
             padding: 1rem;
-            border-radius: 4px;
+            border-radius: 8px;
             display: none;
         }
         
@@ -379,6 +415,27 @@ try {
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+        
+        @media (max-width: 576px) {
+            #qrScannerModal .modal-content {
+                width: 92%;
+                margin: 0.5rem auto;
+            }
+            
+            #qrScannerModal .modal-body {
+                padding: 0.75rem;
+            }
+            
+            .scanner-container {
+                max-width: 100%;
+                margin: 0;
+            }
+            
+            .scan-overlay {
+                width: 220px;
+                height: 220px;
+            }
+        }
 
         .scanner-container {
             position: relative;
@@ -388,11 +445,13 @@ try {
             overflow: hidden;
             border-radius: 12px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            aspect-ratio: 4/3;
         }
 
         .scanner-container video {
             width: 100%;
-            height: auto;
+            height: 100%;
+            object-fit: cover;
             display: block;
             background: #f8f9fa;
         }
@@ -402,6 +461,8 @@ try {
             position: absolute;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
         }
 
         .scan-overlay {
@@ -493,8 +554,12 @@ try {
         .scanner-instructions {
             text-align: center;
             margin: 1rem 0;
-            color: #666;
+            color: #495057;
             font-size: 0.9rem;
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
         }
 
         .notification {
@@ -512,6 +577,21 @@ try {
             gap: 10px;
             transform: translateX(150%);
             transition: transform 0.3s ease-in-out;
+            max-width: 90%;
+        }
+        
+        @media (max-width: 576px) {
+            .notification {
+                right: 5%;
+                left: 5%;
+                width: 90%;
+                padding: 12px 15px;
+            }
+            
+            .scanner-instructions {
+                margin: 0.75rem 0;
+                padding: 0.5rem;
+            }
         }
 
         .notification.show {
@@ -569,6 +649,15 @@ try {
             </div>
         </div>
     </div>
+    
+    <!-- QR Scan Success Notification -->
+    <div id="scanSuccessNotification" class="notification">
+        <i class="fas fa-check-circle"></i>
+        <div>
+            <strong>QR Code Scanned!</strong>
+            <p class="mb-0">Appointment has been highlighted.</p>
+        </div>
+    </div>
 
     <div class="container">
         <div class="page-header">
@@ -606,8 +695,10 @@ try {
                 </div>
                 
                 <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Filter</button>
-                    <a href="?date=<?php echo $date; ?>" class="btn btn-secondary">Reset</a>
+                    <div class="d-flex gap-2 text-align-center justify-content-center">
+                        <button type="submit" class="btn btn-primary flex-grow-1">Filter</button>
+                        <a href="?date=<?php echo $date; ?>" class="btn btn-secondary flex-grow-1">Reset</a>
+                    </div>
                 </div>
             </form>
         </div>
@@ -733,8 +824,10 @@ try {
     <div id="qrScannerModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">Scan Appointment QR Code</h3>
-                <button type="button" class="modal-close" onclick="closeQRScanner()">×</button>
+                <h3 class="modal-title"><i class="fas fa-qrcode"></i> Scan QR Code</h3>
+                <button type="button" class="modal-close" onclick="closeQRScanner()">
+                    <span>&times;</span>
+                </button>
             </div>
             <div class="modal-body">
                 <div class="scanner-container">
@@ -746,12 +839,14 @@ try {
                     <div class="scan-overlay-corners"></div>
                 </div>
                 <div class="scanner-instructions">
-                    Position the QR code within the frame to scan
+                    <i class="fas fa-info-circle me-1"></i> Position the QR code within the frame to scan
                 </div>
                 <div id="qrScannerResult" class="mt-3 text-center"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeQRScanner()">Close</button>
+                <button type="button" class="btn btn-secondary w-100" onclick="closeQRScanner()">
+                    <i class="fas fa-times me-1"></i> Close
+                </button>
             </div>
         </div>
     </div>

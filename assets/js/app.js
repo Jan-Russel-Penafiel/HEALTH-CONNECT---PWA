@@ -222,25 +222,94 @@ function initPWA() {
     // Register service worker for PWA functionality
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/connect/service-worker.js')
+            navigator.serviceWorker.register('./service-worker.js')
                 .then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    
+                    // Check for updates periodically
+                    setInterval(() => {
+                        registration.update()
+                            .then(() => console.log('Periodic update check triggered'));
+                    }, 30 * 60 * 1000); // Check every 30 minutes
+                    
+                    // Listen for new service worker installation
+                    registration.addEventListener('updatefound', () => {
+                        // Get the installing service worker
+                        const newWorker = registration.installing;
+                        console.log('[PWA] New service worker installing');
+                        
+                        // Listen for state changes
+                        newWorker.addEventListener('statechange', () => {
+                            console.log('[PWA] Service worker state change:', newWorker.state);
+                            
+                            // When the service worker is installed
+                            if (newWorker.state === 'installed') {
+                                // Check if there's a controller (meaning this isn't the first install)
+                                if (navigator.serviceWorker.controller) {
+                                    console.log('[PWA] New content is available; please refresh.');
+                                    
+                                    // Show update notification to user
+                                    showUpdateNotification();
+                                }
+                            }
+                        });
+                    });
                 })
                 .catch(error => {
-                    console.log('ServiceWorker registration failed: ', error);
+                    console.error('ServiceWorker registration failed: ', error);
                 });
+                
+            // Listen for messages from the service worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                console.log('[PWA] Received message from service worker:', event.data);
+                
+                if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
+                    console.log('[PWA] Update available, version:', event.data.version);
+                    showUpdateNotification();
+                }
+            });
         });
     }
     
+    // Add install prompt for iOS devices
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    
+    if (isIOS && !isInStandaloneMode) {
+        // Show iOS install prompt after 2 seconds
+        setTimeout(() => {
+            const iosPrompt = document.createElement('div');
+            iosPrompt.className = 'ios-prompt';
+            iosPrompt.innerHTML = `
+                <div class="ios-prompt-content">
+                    <span class="ios-prompt-close">&times;</span>
+                    <p>To install this app on your iOS device:</p>
+                    <ol>
+                        <li>Tap <i class="fas fa-share"></i> Share</li>
+                        <li>Select "Add to Home Screen"</li>
+                    </ol>
+                </div>
+            `;
+            document.body.appendChild(iosPrompt);
+            
+            // Add close functionality
+            iosPrompt.querySelector('.ios-prompt-close').addEventListener('click', () => {
+                document.body.removeChild(iosPrompt);
+                // Save that we've shown the prompt
+                localStorage.setItem('iosPromptShown', 'true');
+            });
+        }, 2000);
+    }
+
     // Add PWA install button functionality
     let deferredPrompt;
     const pwaInstallBtn = document.querySelector('.pwa-install');
-    
+
     // Hide install button by default
     if (pwaInstallBtn) {
         pwaInstallBtn.style.display = 'none';
     }
-    
+
     window.addEventListener('beforeinstallprompt', (e) => {
         // Prevent the mini-infobar from appearing on mobile
         e.preventDefault();
@@ -253,10 +322,19 @@ function initPWA() {
             // Add animation to make it noticeable
             setTimeout(() => {
                 pwaInstallBtn.classList.add('show');
-            }, 1000);
+                // Add a subtle pulse animation
+                pwaInstallBtn.animate([
+                    { transform: 'scale(1)' },
+                    { transform: 'scale(1.1)' },
+                    { transform: 'scale(1)' }
+                ], {
+                    duration: 1000,
+                    iterations: 2
+                });
+            }, 1500);
         }
     });
-    
+
     // When the install button is clicked
     if (pwaInstallBtn) {
         pwaInstallBtn.addEventListener('click', async () => {
@@ -268,7 +346,7 @@ function initPWA() {
             
             // Wait for the user to respond to the prompt
             const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to the install prompt: ${outcome}`);
+            console.log(`[PWA] User response to the install prompt: ${outcome}`);
             
             // Clear the deferredPrompt variable
             deferredPrompt = null;
@@ -276,26 +354,153 @@ function initPWA() {
             // Hide the install button
             pwaInstallBtn.classList.remove('show');
             setTimeout(() => {
-            pwaInstallBtn.style.display = 'none';
+                pwaInstallBtn.style.display = 'none';
             }, 300);
         });
     }
-    
+
     // Listen for successful installation
     window.addEventListener('appinstalled', () => {
         // Hide the install button
         if (pwaInstallBtn) {
             pwaInstallBtn.classList.remove('show');
             setTimeout(() => {
-            pwaInstallBtn.style.display = 'none';
+                pwaInstallBtn.style.display = 'none';
             }, 300);
         }
         
         // Show a toast notification
         showAlert('App installed successfully!', 'success');
         
-        console.log('PWA was installed');
+        console.log('[PWA] App was installed');
     });
+}
+
+// Function to show update notification with refresh button
+function showUpdateNotification() {
+    // Check if there's already an update notification
+    if (document.querySelector('.update-notification')) return;
+    
+    const notification = document.createElement('div');
+    notification.className = 'update-notification';
+    notification.innerHTML = `
+        <div class="update-notification-content">
+            <p><i class="fas fa-sync-alt"></i> New version available!</p>
+            <div class="update-actions">
+                <button class="btn btn-primary btn-update">Update Now</button>
+                <button class="btn btn-secondary btn-later">Later</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    
+    // Apply the update when clicked
+    notification.querySelector('.btn-update').addEventListener('click', () => {
+        // Send message to service worker to skip waiting
+        if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'SKIP_WAITING'
+            });
+        }
+        
+        // Force reload the page
+        window.location.reload();
+    });
+    
+    // Dismiss the notification
+    notification.querySelector('.btn-later').addEventListener('click', () => {
+        document.body.removeChild(notification);
+    });
+    
+    // Add styles for the notification if not already in CSS
+    if (!document.getElementById('update-notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'update-notification-styles';
+        style.textContent = `
+            .update-notification {
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                z-index: 1000;
+                background-color: #fff;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                max-width: 300px;
+                animation: slideIn 0.3s ease;
+            }
+            
+            .update-notification-content {
+                padding: 16px;
+            }
+            
+            .update-notification p {
+                margin: 0 0 12px 0;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+            }
+            
+            .update-notification i {
+                margin-right: 8px;
+                color: #4a90e2;
+            }
+            
+            .update-actions {
+                display: flex;
+                gap: 8px;
+            }
+            
+            .btn-update, .btn-later {
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+            
+            @keyframes slideIn {
+                from { transform: translate(-50px, 20px); opacity: 0; }
+                to { transform: translate(0, 0); opacity: 1; }
+            }
+            
+            .ios-prompt {
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
+                background: white;
+                padding: 15px;
+                border-radius: 10px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+            }
+            
+            .ios-prompt-content {
+                position: relative;
+            }
+            
+            .ios-prompt-close {
+                position: absolute;
+                top: -10px;
+                right: -5px;
+                font-size: 24px;
+                cursor: pointer;
+            }
+            
+            .ios-prompt p {
+                margin: 0 0 10px 0;
+                font-weight: 500;
+            }
+            
+            .ios-prompt ol {
+                margin: 0;
+                padding-left: 20px;
+            }
+            
+            .ios-prompt li {
+                margin-bottom: 5px;
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }
 
 // Dashboard charts initialization using Chart.js
@@ -409,7 +614,7 @@ function validateForm(formId) {
 }
 
 // Show alert message with toast notifications
-function showAlert(message, type = 'info') {
+function showAlert(message, type = 'info', isPersistent = false) {
     // Check if toast container exists, if not create it
     let toastContainer = document.querySelector('.toast-container');
     if (!toastContainer) {
@@ -427,18 +632,43 @@ function showAlert(message, type = 'info') {
                      type === 'error' ? 'fa-times-circle' :
                      type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
     
-    // Create toast content
-    toast.innerHTML = `
-        <div class="toast-icon">
-            <i class="fas ${iconClass}"></i>
-        </div>
-        <div class="toast-content">
-            ${message}
-        </div>
-        <div class="toast-close">
-            <i class="fas fa-times"></i>
-        </div>
-    `;
+    // Create toast content with action button for updates
+    if (isPersistent && message.includes('update')) {
+        toast.innerHTML = `
+            <div class="toast-icon">
+                <i class="fas ${iconClass}"></i>
+            </div>
+            <div class="toast-content">
+                ${message}
+            </div>
+            <div class="toast-action">
+                <button class="btn-refresh">Refresh</button>
+            </div>
+            <div class="toast-close">
+                <i class="fas fa-times"></i>
+            </div>
+        `;
+        
+        // Add refresh button functionality
+        const refreshBtn = toast.querySelector('.btn-refresh');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                window.location.reload();
+            });
+        }
+    } else {
+        toast.innerHTML = `
+            <div class="toast-icon">
+                <i class="fas ${iconClass}"></i>
+            </div>
+            <div class="toast-content">
+                ${message}
+            </div>
+            <div class="toast-close">
+                <i class="fas fa-times"></i>
+            </div>
+        `;
+    }
     
     // Add to container
     toastContainer.appendChild(toast);
@@ -457,15 +687,17 @@ function showAlert(message, type = 'info') {
         toast.classList.add('show');
     }, 10);
     
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.classList.remove('show');
-            setTimeout(() => {
-                toast.remove();
-            }, 300);
-        }
-    }, 5000);
+    // Auto-dismiss after 5 seconds for non-persistent toasts
+    if (!isPersistent) {
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }
+        }, 5000);
+    }
 }
 
 // Format date

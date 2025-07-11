@@ -14,10 +14,15 @@ session_start();
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="assets/images/icon-192x192.png">
+    <link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HealthConnect">
     
     <!-- Favicon -->
-    <link rel="shortcut icon" href="assets/images/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16x16.png">
+    <link rel="mask-icon" href="assets/images/safari-pinned-tab.svg" color="#4CAF50">
     
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -29,6 +34,20 @@ session_start();
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/style.css">
+    
+    <!-- Service Worker Update Check -->
+    <script>
+        // Check if service worker is registered when page loads
+        window.addEventListener('load', function() {
+            if ('serviceWorker' in navigator) {
+                // Force check for updates on page load
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.update();
+                    console.log('[PWA] Checking for service worker updates on page load');
+                });
+            }
+        });
+    </script>
     
     <style>
         /* Additional styles for enhanced UI */
@@ -243,10 +262,146 @@ session_start();
         }
         
         .pwa-install {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #4CAF50;
+            color: white;
             border-radius: 30px;
-            padding: 12px 20px;
+            padding: 12px 24px;
             font-weight: 600;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform: translateX(-100px);
+            opacity: 0;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .pwa-install.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .pwa-install {
+                bottom: 80px;
+                left: 15px;
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+        
+        .pwa-install i {
+            margin-right: 8px;
+        }
+        
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .toast {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            min-width: 300px;
+            max-width: 400px;
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .toast-success {
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .toast-error {
+            border-left: 4px solid #F44336;
+        }
+        
+        .toast-info {
+            border-left: 4px solid #2196F3;
+        }
+        
+        .toast-warning {
+            border-left: 4px solid #FF9800;
+        }
+        
+        .toast-icon {
+            margin-right: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .toast-success .toast-icon {
+            color: #4CAF50;
+        }
+        
+        .toast-error .toast-icon {
+            color: #F44336;
+        }
+        
+        .toast-info .toast-icon {
+            color: #2196F3;
+        }
+        
+        .toast-warning .toast-icon {
+            color: #FF9800;
+        }
+        
+        .toast-content {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        
+        .toast-close {
+            margin-left: 10px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        .toast-close:hover {
+            opacity: 1;
+        }
+        
+        .toast-action {
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+        
+        .btn-refresh {
+            background-color: #fff;
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-refresh:hover {
+            background-color: #4CAF50;
+            color: #fff;
         }
         
         /* Footer Navigation */

@@ -117,15 +117,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch all health workers
+// Get search parameter
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+// Fetch health workers with search functionality
 try {
+    $params = [];
+    $whereClause = "u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'health_worker')";
+    
+    if (!empty($search)) {
+        $whereClause .= " AND (
+            u.first_name LIKE :search 
+            OR u.last_name LIKE :search 
+            OR CONCAT(u.first_name, ' ', u.last_name) LIKE :search
+            OR u.email LIKE :search 
+            OR u.mobile_number LIKE :search
+            OR u.username LIKE :search
+            OR u.address LIKE :search
+            OR hw.position LIKE :search
+            OR hw.specialty LIKE :search
+            OR hw.license_number LIKE :search
+        )";
+        $params[':search'] = "%$search%";
+    }
+    
     $query = "SELECT u.*, hw.* 
               FROM users u 
               JOIN health_workers hw ON u.user_id = hw.user_id 
-              WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'health_worker')
+              WHERE $whereClause
               ORDER BY u.last_name, u.first_name";
     $stmt = $conn->prepare($query);
-    $stmt->execute();
+    $stmt->execute($params);
     $health_workers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log("Error fetching health workers: " . $e->getMessage());
@@ -230,6 +252,92 @@ try {
             padding: 40px;
             color: #666;
         }
+        
+        .search-container {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        
+        .search-input-container {
+            display: flex;
+            width: 100%;
+            gap: 10px;
+        }
+        
+        .search-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .search-button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .search-button:hover {
+            background: #3a80d2;
+        }
+        
+        .search-reset {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            align-self: flex-start;
+        }
+        
+        .search-reset:hover {
+            background: #5a6268;
+        }
+        
+        .search-results-info {
+            margin-top: 10px;
+            color: #666;
+            font-style: italic;
+        }
+
+        @media (max-width: 600px) {
+            .search-button {
+                padding: 6px 10px;
+                font-size: 0.9rem;
+                min-width: 36px;
+                width: auto;
+            }
+            .search-form {
+                gap: 6px;
+            }
+            .search-reset {
+                padding: 6px 10px;
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -262,6 +370,32 @@ try {
                 ?>
             </div>
         <?php endif; ?>
+        
+        <!-- Search Form -->
+        <div class="search-container">
+            <form class="search-form" method="GET">
+                <div class="search-input-container">
+                    <input type="text" name="search" class="search-input" placeholder="Search across all fields..." value="<?php echo htmlspecialchars($search); ?>">
+                    
+                    <button type="submit" class="search-button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                
+                <?php if (!empty($search)): ?>
+                    <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="search-reset">
+                        <i class="fas fa-times"></i> Reset Search
+                    </a>
+                <?php endif; ?>
+                
+                <?php if (!empty($search)): ?>
+                    <div class="search-results-info">
+                        Found <?php echo count($health_workers); ?> result<?php echo count($health_workers) !== 1 ? 's' : ''; ?> 
+                        for "<?php echo htmlspecialchars($search); ?>".
+                    </div>
+                <?php endif; ?>
+            </form>
+        </div>
         
         <div class="cards-grid">
             <?php if (!empty($health_workers)): ?>
@@ -314,9 +448,15 @@ try {
                 <?php endforeach; ?>
             <?php else: ?>
                 <div class="empty-state">
-                    <i class="fas fa-user-md fa-3x"></i>
-                    <h3>No Health Workers Found</h3>
-                    <p>Click the "Add Health Worker" button to add a new health worker.</p>
+                    <?php if (!empty($search)): ?>
+                        <i class="fas fa-search fa-3x"></i>
+                        <h3>No Health Workers Found</h3>
+                        <p>No health workers match your search criteria. Try different keywords or <a href="<?php echo $_SERVER['PHP_SELF']; ?>">clear the search</a>.</p>
+                    <?php else: ?>
+                        <i class="fas fa-user-md fa-3x"></i>
+                        <h3>No Health Workers Found</h3>
+                        <p>Click the "Add Health Worker" button to add a new health worker.</p>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>

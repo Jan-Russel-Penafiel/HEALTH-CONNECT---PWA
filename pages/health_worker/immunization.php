@@ -628,7 +628,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 1.5rem;
+            padding: 1.25rem;
             position: relative;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
@@ -642,9 +642,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             color: #2c3e50;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .immunization-date i {
@@ -652,41 +652,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .patient-info {
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
             border-bottom: 1px solid #eee;
         }
 
         .patient-info h3 {
             margin: 0 0 0.5rem 0;
             color: #2c3e50;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
+            line-height: 1.3;
+            word-break: break-word;
         }
 
         .patient-info .email {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #666;
+            word-break: break-all;
         }
 
         .immunization-details {
-            margin-bottom: 1.5rem;
-        }
-
-        .immunization-type {
             margin-bottom: 1rem;
         }
 
+        .immunization-type {
+            margin-bottom: 0.75rem;
+        }
+
         .immunization-type h4 {
-            margin: 0 0 0.5rem 0;
+            margin: 0 0 0.35rem 0;
             color: #2c3e50;
-            font-size: 1.1rem;
+            font-size: 1rem;
+            line-height: 1.3;
         }
 
         .immunization-type .description {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #666;
             margin: 0;
             line-height: 1.4;
@@ -694,13 +698,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .next-schedule {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 0.5rem;
-            margin: 1rem 0;
+            margin: 0.75rem 0;
             padding: 0.75rem;
             background: #f8f9fa;
             border-radius: 4px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .next-schedule i {
@@ -713,54 +718,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .notes {
-            margin-top: 1rem;
-            font-size: 0.9rem;
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
         }
 
         .notes p {
-            margin: 0.5rem 0 0 0;
+            margin: 0.35rem 0 0 0;
             color: #666;
             line-height: 1.4;
         }
 
         .immunization-actions {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 0.5rem;
-            margin-top: 1rem;
+            margin-top: 0.75rem;
         }
 
         .immunization-actions .btn {
-            flex: 1;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
+            gap: 0.35rem;
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            width: 100%;
         }
 
         .empty-state {
             grid-column: 1 / -1;
             text-align: center;
-            padding: 3rem;
+            padding: 2rem 1rem;
             background: #f8f9fa;
             border-radius: 8px;
         }
 
         .empty-state i {
-            font-size: 3rem;
+            font-size: 2.5rem;
             color: #adb5bd;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .empty-state h3 {
             margin: 0 0 0.5rem 0;
             color: #495057;
+            font-size: 1.1rem;
         }
 
         .empty-state p {
             color: #6c757d;
             margin: 0;
+            font-size: 0.9rem;
         }
 
         .search-form {
@@ -845,23 +854,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         @media (max-width: 768px) {
             .immunization-grid {
                 grid-template-columns: 1fr;
+                gap: 1rem;
+                padding: 1rem 0;
+            }
+
+            .immunization-card {
+                padding: 1rem;
+                margin: 0;
+            }
+
+            .immunization-date {
+                font-size: 0.9rem;
+            }
+
+            .patient-info h3 {
+                font-size: 1rem;
+            }
+
+            .patient-info .email,
+            .immunization-type .description,
+            .next-schedule,
+            .notes {
+                font-size: 0.8rem;
+            }
+
+            .next-schedule {
+                padding: 0.5rem;
             }
 
             .immunization-actions {
-                flex-direction: column;
+                grid-template-columns: 1fr;
             }
 
             .immunization-actions .btn {
-                width: 100%;
+                padding: 0.6rem;
+                font-size: 0.9rem;
             }
 
-            .search-form {
+            .age {
+                font-size: 0.8rem;
+            }
+
+            .empty-state {
+                padding: 1.5rem 1rem;
+            }
+
+            .empty-state i {
+                font-size: 2rem;
+            }
+
+            .empty-state h3 {
+                font-size: 1rem;
+            }
+
+            .empty-state p {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .immunization-grid {
+                gap: 0.75rem;
+            }
+
+            .immunization-card {
+                border-radius: 6px;
+            }
+
+            .immunization-actions .btn {
+                padding: 0.7rem;
+            }
+
+            .next-schedule {
                 flex-direction: column;
-                width: 100%;
-            }
-
-            .search-form input {
-                width: 100%;
+                align-items: flex-start;
+                gap: 0.25rem;
             }
         }
     </style>

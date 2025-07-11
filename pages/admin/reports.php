@@ -164,7 +164,7 @@ if ($report_type) {
                 $report_summary = [];
                 
                 if (!empty($patient_id)) {
-                    // Get patient's upcoming appointments
+                    // Get patient's appointments (not just upcoming ones)
                     $query = "SELECT 
                                 a.appointment_id,
                                 a.appointment_date,
@@ -182,8 +182,8 @@ if ($report_type) {
                              JOIN users hw_user ON hw.user_id = hw_user.user_id
                              JOIN appointment_status ast ON a.status_id = ast.status_id
                              WHERE a.patient_id = :patient_id
-                             AND a.appointment_date >= CURDATE()
-                             ORDER BY a.appointment_date ASC, a.appointment_time ASC";
+                             ORDER BY a.appointment_date DESC, a.appointment_time ASC
+                             LIMIT 1";
                     
                     $stmt = $conn->prepare($query);
                     $stmt->execute([':patient_id' => $patient_id]);
@@ -613,6 +613,11 @@ if ($report_type) {
                             </option>
                         <?php endforeach; ?>
                     </select>
+                    <?php if ($report_type === 'appointment_slip' && empty($patient_id)): ?>
+                    <div class="text-danger mt-2">
+                        <small><i class="fas fa-exclamation-circle"></i> Please select a patient to generate an appointment slip.</small>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="form-group" style="align-self: flex-end;">
@@ -633,7 +638,11 @@ if ($report_type) {
             <div class="empty-state">
                 <i class="fas fa-file-alt"></i>
                 <h3>No Data Available</h3>
-                <p>No records found for the selected criteria.</p>
+                <?php if ($report_type === 'appointment_slip' && !empty($patient_id)): ?>
+                    <p>No appointments found for this patient. Please schedule an appointment first.</p>
+                <?php else: ?>
+                    <p>No records found for the selected criteria.</p>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 
@@ -1324,6 +1333,15 @@ if ($report_type) {
 
         // Initialize filter visibility
         toggleFilters();
+        
+        // Add change event to patient select for appointment slip
+        $('#patient_id').on('change', function() {
+            if ($('#type').val() === 'appointment_slip') {
+                if (this.value) {
+                    $('form').submit(); // Auto-submit when patient is selected for appointment slip
+                }
+            }
+        });
     });
 
     function exportToCSV() {
