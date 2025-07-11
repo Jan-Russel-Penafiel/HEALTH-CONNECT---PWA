@@ -496,7 +496,7 @@ session_start();
     <!-- Footer Navigation -->
     <div class="footer-nav">
         <div class="footer-nav-container">
-            <a href="../index.php" class="footer-nav-item active">
+            <a href="index.php#home" class="footer-nav-item active">
                 <i class="fas fa-home"></i>
                 <span>Home</span>
             </a>
