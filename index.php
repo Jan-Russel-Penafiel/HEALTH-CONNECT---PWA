@@ -325,7 +325,7 @@ session_start();
     </header>
     
     <!-- Hero Section -->
-    <section class="hero">
+    <section id="home" class="hero">
         <div class="hero-content">
             <h1>Your Health, Our Priority</h1>
             <p>HealthConnect connects you to Brgy. Poblacion Health Center services, making healthcare accessible right from your mobile device. Schedule appointments, track immunizations, and access your medical records with ease.</p>
@@ -496,23 +496,23 @@ session_start();
     <!-- Footer Navigation -->
     <div class="footer-nav">
         <div class="footer-nav-container">
-            <a href="#" class="footer-nav-item active">
+            <a href="../index.php" class="footer-nav-item active">
                 <i class="fas fa-home"></i>
                 <span>Home</span>
             </a>
-            <a href="#features" class="footer-nav-item">
+            <a href="index.php#features" class="footer-nav-item">
                 <i class="fas fa-list-ul"></i>
                 <span>Features</span>
             </a>
-            <a href="#about" class="footer-nav-item">
+            <a href="index.php#about" class="footer-nav-item">
                 <i class="fas fa-info-circle"></i>
                 <span>About</span>
             </a>
-            <a href="#contact" class="footer-nav-item">
+            <a href="index.php#contact" class="footer-nav-item">
                 <i class="fas fa-envelope"></i>
                 <span>Contact</span>
             </a>
-            <a href="pages/login.php" class="footer-nav-item">
+            <a href="pages/login.php" class="footer-nav-item ">
                 <i class="fas fa-user"></i>
                 <span>Login</span>
             </a>
@@ -544,6 +544,45 @@ session_start();
             this.reset();
         });
         
+        // Function to show alerts
+        function showAlert(message, type) {
+            const alertContainer = document.querySelector('.alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            alertContainer.appendChild(alert);
+            
+            // Remove alert after 5 seconds
+            setTimeout(function() {
+                alert.remove();
+            }, 5000);
+        }
+        
+        // Smooth scrolling for footer navigation
+        document.querySelectorAll('.footer-nav-item[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                
+                if (targetElement) {
+                    // Smooth scroll to target
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 60, // Adjust for header height
+                        behavior: 'smooth'
+                    });
+                    
+                    // Update active state
+                    document.querySelectorAll('.footer-nav-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                }
+            });
+        });
+        
         // Highlight active footer nav item based on scroll position
         window.addEventListener('scroll', function() {
             const sections = document.querySelectorAll('section');
@@ -554,7 +593,7 @@ session_start();
             sections.forEach(section => {
                 const sectionTop = section.offsetTop;
                 const sectionHeight = section.clientHeight;
-                if (pageYOffset >= (sectionTop - 200)) {
+                if (window.pageYOffset >= (sectionTop - 200)) {
                     current = section.getAttribute('id');
                 }
             });
@@ -562,7 +601,7 @@ session_start();
             footerNavItems.forEach(item => {
                 item.classList.remove('active');
                 const href = item.getAttribute('href');
-                if (href === '#' && current === '') {
+                if (href === '#home' && current === '') {
                     item.classList.add('active');
                 } else if (href === `#${current}`) {
                     item.classList.add('active');
