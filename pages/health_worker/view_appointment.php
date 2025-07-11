@@ -137,7 +137,7 @@ try {
                     </div>
                     <div class="appointment-time">
                         <i class="far fa-clock"></i> 
-                        <?php echo date('h:i A', strtotime($appointment['appointment_time'])); ?>
+                        <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
                     </div>
                     <div class="appointment-status">
                         <span class="status-badge <?php echo strtolower($appointment['status_name']); ?>">

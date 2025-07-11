@@ -33,30 +33,8 @@ try {
 }
 
 // Handle search and filters
-$search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$status = isset($_GET['status']) ? $_GET['status'] : '';
-$date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
-
 $where_clauses = ["a.health_worker_id = ?"];
 $params = [$health_worker_id];
-
-if (!empty($search)) {
-    $where_clauses[] = "(u.name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)";
-    $search_param = "%$search%";
-    $params = array_merge($params, [$search_param, $search_param, $search_param]);
-}
-
-if (!empty($status)) {
-    $where_clauses[] = "a.status_id = ?"; // Changed from 'a.status' to 'a.status_id'
-    $params[] = $status;
-}
-
-if (!empty($date)) {
-    $where_clauses[] = "DATE(a.appointment_date) = ?";
-    $params[] = $date;
-}
-
-$where_clause = implode(' AND ', $where_clauses);
 
 try {
     // Get appointments
@@ -67,11 +45,11 @@ try {
               JOIN patients p ON a.patient_id = p.patient_id
               JOIN users u ON p.user_id = u.user_id
               JOIN appointment_status s ON a.status_id = s.status_id
-              WHERE $where_clause 
+              WHERE a.health_worker_id = ? AND a.status_id != 3
               ORDER BY a.appointment_date ASC, a.appointment_time ASC";
     
     $stmt = $pdo->prepare($query);
-    $stmt->execute($params);
+    $stmt->execute([$health_worker_id]);
     $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
@@ -160,6 +138,15 @@ try {
             0% { box-shadow: 0 0 15px rgba(255, 193, 7, 0.5); }
             50% { box-shadow: 0 0 25px rgba(255, 193, 7, 0.8); }
             100% { box-shadow: 0 0 15px rgba(255, 193, 7, 0.5); }
+        }
+
+        .appointment-date {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
         }
 
         .appointment-time {
@@ -661,8 +648,11 @@ try {
 
     <div class="container">
         <div class="page-header">
-            <h1>Appointments</h1>
+            <h1>Active Appointments</h1>
             <div class="header-actions">
+                <a href="done_appointments.php" class="btn btn-success">
+                    <i class="fas fa-check-circle"></i> Completed Appointments
+                </a>
                 <button class="btn btn-primary" onclick="showAddAppointmentModal()">
                     <i class="fas fa-plus"></i> Schedule Appointment
                 </button>
@@ -670,37 +660,6 @@ try {
                     <i class="fas fa-qrcode"></i> Scan QR Code
                 </button>
             </div>
-        </div>
-
-        <div class="filters-section">
-            <form action="" method="GET" class="filter-grid">
-                <div class="form-group">
-                    <input type="text" name="search" class="form-control" placeholder="Search patients..." 
-                           value="<?php echo htmlspecialchars($search); ?>">
-                </div>
-                
-                <div class="form-group">
-                    <select name="status" class="form-control">
-                        <option value="">All Status</option>
-                        <option value="1" <?php echo $status === '1' ? 'selected' : ''; ?>>Scheduled</option>
-                        <option value="2" <?php echo $status === '2' ? 'selected' : ''; ?>>Confirmed</option>
-                        <option value="3" <?php echo $status === '3' ? 'selected' : ''; ?>>Done</option>
-                        <option value="4" <?php echo $status === '4' ? 'selected' : ''; ?>>Cancelled</option>
-                        <option value="5" <?php echo $status === '5' ? 'selected' : ''; ?>>No Show</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <input type="date" name="date" class="form-control" value="<?php echo $date; ?>">
-                </div>
-                
-                <div class="form-group">
-                    <div class="d-flex gap-2 text-align-center justify-content-center">
-                        <button type="submit" class="btn btn-primary flex-grow-1">Filter</button>
-                        <a href="?date=<?php echo $date; ?>" class="btn btn-secondary flex-grow-1">Reset</a>
-                    </div>
-                </div>
-            </form>
         </div>
 
         <div class="appointments-grid">
@@ -713,9 +672,14 @@ try {
             <?php else: ?>
                 <?php foreach ($appointments as $appointment): ?>
                 <div class="appointment-card <?php echo strtolower($appointment['status']); ?>" data-appointment-id="<?php echo $appointment['id']; ?>">
+                    <div class="appointment-date">
+                        <i class="fas fa-calendar"></i>
+                        <span><?php echo date('F d, Y', strtotime($appointment['appointment_date'])); ?></span>
+                    </div>
+                    
                     <div class="appointment-time">
                         <i class="fas fa-clock"></i>
-                        <span><?php echo date('H:i', strtotime($appointment['appointment_time'])); ?></span>
+                        <span><?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?></span>
                     </div>
                     
                     <div class="appointment-status">
@@ -796,7 +760,7 @@ try {
 
                             for ($time = $start; $time <= $end; $time += $interval) {
                                 $formatted_time = date('H:i', $time);
-                                echo "<option value=\"$formatted_time\">$formatted_time</option>";
+                                echo "<option value=\"$formatted_time\">".date('g:i A', $time)."</option>";
                             }
                             ?>
                         </select>

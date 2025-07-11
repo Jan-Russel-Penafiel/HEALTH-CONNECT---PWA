@@ -12,14 +12,27 @@ if ($_SESSION['role'] !== 'admin') {
 $database = new Database();
 $conn = $database->getConnection();
 
-// Handle search
+// Handle search and filter
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$filter = isset($_GET['filter']) ? trim($_GET['filter']) : 'all'; // Default to 'all'
 $where_clause = '';
 $params = [];
 
+// Build where clause based on search and filter
 if (!empty($search)) {
     $where_clause = "WHERE (u.first_name LIKE :search OR u.last_name LIKE :search OR u.email LIKE :search OR u.mobile_number LIKE :search)";
     $params[':search'] = "%$search%";
+}
+
+// Add filter condition
+if ($filter !== 'all') {
+    $is_approved = ($filter === 'approved') ? 1 : 0;
+    if (!empty($where_clause)) {
+        $where_clause .= " AND p.is_approved = :is_approved";
+    } else {
+        $where_clause = "WHERE p.is_approved = :is_approved";
+    }
+    $params[':is_approved'] = $is_approved;
 }
 
 // Get patients list with pagination
@@ -33,7 +46,7 @@ try {
                     JOIN user_roles r ON u.role_id = r.role_id 
                     JOIN patients p ON u.user_id = p.user_id
                     WHERE r.role_name = 'patient' " . 
-                    ($where_clause ? str_replace('WHERE', 'AND', $where_clause) : '');
+                    ($where_clause ? "AND " . substr($where_clause, 6) : '');
     $stmt = $conn->prepare($count_query);
     if (!empty($params)) {
         $stmt->execute($params);
@@ -44,7 +57,7 @@ try {
     $total_pages = ceil($total_patients / $limit);
 
     // Get patients for current page
-    $query = "SELECT u.*, p.patient_id, p.blood_type,
+    $query = "SELECT u.*, p.patient_id, p.blood_type, p.is_approved, p.approved_at,
               (SELECT COUNT(*) FROM appointments a WHERE a.patient_id = p.patient_id) as appointment_count,
               (SELECT COUNT(*) FROM immunization_records ir WHERE ir.patient_id = p.patient_id) as immunization_count
               FROM users u 
@@ -218,36 +231,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         
         .patient-card .actions {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;  /* Changed to space-between for even distribution */
             gap: 10px;
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px solid #eee;
+            flex-wrap: nowrap;  /* Prevent wrapping */
+            width: 100%;  /* Ensure full width */
         }
         
         .patient-card .btn-action {
-            padding: 8px 12px;
+            flex: 1 1 0;  /* Equal width distribution */
+            min-width: 0;  /* Remove min-width constraint */
+            max-width: none;  /* Remove max-width constraint */
+            padding: 8px 15px;  /* Medium-sized padding */
             border-radius: 5px;
             border: none;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s ease;
             color: white;
             text-decoration: none;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            gap: 8px;  /* Increased gap between icon and text */
+            font-size: 0.9em;  /* Slightly larger font */
+            font-weight: 500;
+            text-align: center;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 0;  /* Remove any margin */
+            height: 36px;  /* Fixed height for consistency */
         }
-        
+
+        .patient-card .btn-action i {
+            font-size: 1em;  /* Match icon size with text */
+        }
+
+        .patient-card .btn-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+        }
+
+        /* Update button colors with slightly adjusted shades */
         .patient-card .btn-view {
-            background: #4a90e2;
+            background: #2196F3;  /* Brighter blue */
         }
-        
+
         .patient-card .btn-edit {
-            background: #28a745;
+            background: #4CAF50;  /* Brighter green */
+        }
+
+        .patient-card .btn-approve {
+            background: #4CAF50;  /* Match edit button */
+        }
+
+        .patient-card .btn-delete {
+            background: #F44336;  /* Brighter red */
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 480px) {
+            .patient-card .actions {
+                flex-direction: row;  /* Keep horizontal */
+                gap: 8px;  /* Slightly reduced gap on mobile */
+            }
+            
+            .patient-card .btn-action {
+                padding: 8px 12px;  /* Slightly reduced padding */
+                font-size: 0.85em;  /* Slightly smaller font */
+            }
         }
         
-        .patient-card .btn-delete {
-            background: #dc3545;
+        .patient-card .approval-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-top: 8px;
+        }
+        
+        .patient-card .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .patient-card .status-pending {
+            background: #fff3cd;
+            color: #856404;
         }
         
         .patient-card .btn-action:hover {
@@ -268,6 +339,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         
         /* Keep existing modal styles */
+        .approval-status {
+            margin-top: 5px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .approval-status i {
+            font-size: 1em;
+        }
+
+        .approval-status small {
+            display: block;
+            font-size: 0.85em;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -278,14 +379,112 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <h1>Manage Patients</h1>
             <div class="header-actions">
                 <form class="search-form" action="" method="GET">
+                    <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
                     <input type="text" name="search" placeholder="Search patients..." value="<?php echo htmlspecialchars($search); ?>">
                     <button type="submit"><i class="fas fa-search"></i></button>
                 </form>
-                <button class="btn" onclick="showAddPatientModal()">
-                    <i class="fas fa-user-plus"></i> Add Patient
-                </button>
+                <div class="add-and-filter">
+                    <button class="btn" onclick="showAddPatientModal()">
+                        <i class="fas fa-user-plus"></i> Add Patient
+                    </button>
+                    <div class="filter-buttons">
+                        <a href="?filter=all<?php echo $search ? '&search=' . urlencode($search) : ''; ?>" 
+                           class="btn-filter <?php echo $filter === 'all' ? 'active' : ''; ?>">
+                            <i class="fas fa-users"></i> All
+                        </a>
+                        <a href="?filter=approved<?php echo $search ? '&search=' . urlencode($search) : ''; ?>" 
+                           class="btn-filter <?php echo $filter === 'approved' ? 'active' : ''; ?>">
+                            <i class="fas fa-check-circle"></i> Approved
+                        </a>
+                        <a href="?filter=pending<?php echo $search ? '&search=' . urlencode($search) : ''; ?>" 
+                           class="btn-filter <?php echo $filter === 'pending' ? 'active' : ''; ?>">
+                            <i class="fas fa-clock"></i> Pending
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <style>
+            .header-actions {
+                display: flex;
+                gap: 15px;
+                align-items: flex-start;
+            }
+
+            .add-and-filter {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-end;
+            }
+
+            .filter-buttons {
+                display: flex;
+                gap: 8px;
+                background: #f8f9fa;
+                padding: 6px;
+                border-radius: 20px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+
+            .btn-filter {
+                padding: 4px 12px;
+                font-size: 0.85rem;
+                border-radius: 15px;
+                background: transparent;
+                color: #666;
+                text-decoration: none;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                transition: all 0.2s ease;
+            }
+
+            .btn-filter:hover {
+                background: #e9ecef;
+                color: #333;
+            }
+
+            .btn-filter.active {
+                background: var(--primary-color);
+                color: white;
+            }
+
+            .btn-filter i {
+                font-size: 0.8em;
+            }
+
+            @media (max-width: 768px) {
+                .header-actions {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .add-and-filter {
+                    align-items: stretch;
+                }
+
+                .filter-buttons {
+                    justify-content: center;
+                }
+
+                .search-form {
+                    width: 100%;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .filter-buttons {
+                    padding: 4px;
+                }
+
+                .btn-filter {
+                    padding: 4px 8px;
+                    font-size: 0.8rem;
+                }
+            }
+        </style>
 
         <?php if (isset($_SESSION['success'])): ?>
             <div class="alert alert-success">
@@ -316,6 +515,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                     <?php echo ' ' . htmlspecialchars($patient['middle_name'][0]) . '.'; ?>
                                 <?php endif; ?>
                             </h3>
+                            <div class="approval-status <?php echo $patient['is_approved'] ? 'status-approved' : 'status-pending'; ?>">
+                                <i class="fas <?php echo $patient['is_approved'] ? 'fa-check-circle' : 'fa-clock'; ?>"></i>
+                                <?php echo $patient['is_approved'] ? 'Approved' : 'Pending Approval'; ?>
+                                <?php if ($patient['is_approved']): ?>
+                                    <br><small>Approved on: <?php echo date('M d, Y', strtotime($patient['approved_at'])); ?></small>
+                                <?php endif; ?>
+                            </div>
                         </div>
                         
                         <div class="info-section">
@@ -356,14 +562,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         </div>
                         
                         <div class="actions">
-                            <a href="view_patient.php?id=<?php echo $patient['user_id']; ?>" class="btn-action btn-view">
+                            <a href="view_patient.php?id=<?php echo $patient['user_id']; ?>" class="btn-action btn-view" title="View Details">
                                 <i class="fas fa-eye"></i> View
                             </a>
-                            <a href="edit_patient.php?id=<?php echo $patient['user_id']; ?>" class="btn-action btn-edit">
+                            <a href="edit_patient.php?id=<?php echo $patient['user_id']; ?>" class="btn-action btn-edit" title="Edit Patient">
                                 <i class="fas fa-edit"></i> Edit
                             </a>
-                            <button class="btn-action btn-delete" onclick="confirmDelete(<?php echo $patient['user_id']; ?>)">
-                                <i class="fas fa-trash"></i> Delete
+                            <?php if (!$patient['is_approved']): ?>
+                                <button class="btn-action btn-approve" title="Approve Patient" onclick="approvePatient(<?php echo $patient['user_id']; ?>)">
+                                    <i class="fas fa-check"></i> OK
+                                </button>
+                            <?php endif; ?>
+                            <button class="btn-action btn-delete" title="Delete Patient" onclick="confirmDelete(<?php echo $patient['user_id']; ?>)">
+                                <i class="fas fa-trash"></i> Del
                             </button>
                         </div>
                     </div>
@@ -655,6 +866,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     </style>
 
     <script>
+    function disapprovePatient(userId) {
+        if (confirm('Are you sure you want to disapprove and delete this patient? This action cannot be undone.')) {
+            // Use absolute path to ensure correct endpoint location
+            fetch('/connect/api/patients/update_approval.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    is_approved: false,
+                    delete_on_disapprove: true
+                })
+            })
+            .then(response => {
+                return response.text().then(text => {
+                    try {
+                        // Try to parse as JSON
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error("Failed to parse JSON:", text);
+                        throw new Error("Server returned invalid JSON. Check server logs.");
+                    }
+                });
+            })
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Patient has been disapproved and deleted successfully');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    throw new Error(data.message || 'Failed to disapprove patient');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('danger', 'Error: ' + error.message);
+            });
+        }
+    }
+
     function confirmDelete(userId) {
         if (confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
             fetch(`/connect/api/patients/delete.php?id=${userId}`, {
@@ -663,17 +914,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     'Content-Type': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                return response.text().then(text => {
+                    try {
+                        // Try to parse as JSON
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error("Failed to parse JSON:", text);
+                        throw new Error("Server returned invalid JSON. Check server logs.");
+                    }
+                });
+            })
             .then(data => {
                 if (data.success) {
-                    location.reload();
+                    showAlert('success', 'Patient deleted successfully');
+                    setTimeout(() => location.reload(), 1000);
                 } else {
-                    alert('Error deleting patient: ' + data.message);
+                    throw new Error(data.message || 'Failed to delete patient');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while deleting the patient');
+                showAlert('danger', 'Error: ' + error.message);
             });
         }
     }
@@ -725,6 +987,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             return;
         }
     });
+
+    function approvePatient(userId) {
+        if (confirm('Are you sure you want to approve this patient?')) {
+            // Use absolute path to ensure correct endpoint location
+            fetch('/connect/api/patients/update_approval.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    is_approved: true
+                })
+            })
+            .then(response => {
+                return response.text().then(text => {
+                    try {
+                        // Try to parse as JSON
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error("Failed to parse JSON:", text);
+                        throw new Error("Server returned invalid JSON. Check server logs.");
+                    }
+                });
+            })
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Patient approved successfully');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    throw new Error(data.message || 'Failed to approve patient');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('danger', 'Error: ' + error.message);
+            });
+        }
+    }
+
+    // Helper function to show alerts
+    function showAlert(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-' + type;
+        alertDiv.textContent = message;
+        
+        // Find the container
+        const container = document.querySelector('.container');
+        if (container) {
+            // Insert at the top of the container
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+    }
     </script>
 </body>
 </html> 

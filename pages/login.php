@@ -67,25 +67,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $database = new Database();
     $conn = $database->getConnection();
     
-    if (isset($_POST['email'])) {
-        // Step 1: Email submission
-        $email = trim($_POST['email']);
+    if (isset($_POST['identifier'])) {
+        // Step 1: Email or Username submission
+        $identifier = trim($_POST['identifier']);
         
-        if (empty($email)) {
-            $error = "Please enter your email address";
+        if (empty($identifier)) {
+            $error = "Please enter your email address or username";
         } else {
-            // Check if email exists
-            $query = "SELECT u.user_id, u.email, r.role_name, u.first_name, u.last_name 
+            // Check if email or username exists
+            $query = "SELECT u.user_id, u.email, u.username, r.role_name, u.first_name, u.last_name 
                       FROM users u
                       JOIN user_roles r ON u.role_id = r.role_id
-                      WHERE u.email = :email AND u.is_active = 1";
+                      WHERE (u.email = :identifier OR u.username = :identifier) AND u.is_active = 1";
             
             $stmt = $conn->prepare($query);
-            $stmt->bindParam(":email", $email);
+            $stmt->bindParam(":identifier", $identifier);
             $stmt->execute();
             
             if ($stmt->rowCount() > 0) {
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $email = $row['email']; // Get the email to send OTP
                 
                 // Generate and store OTP
                 $otp = generateOTP();
@@ -105,7 +106,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $error = "Failed to send OTP. Please try again.";
                 }
             } else {
-                $error = "Email not found or account is inactive";
+                $error = "Email or username not found or account is inactive";
             }
         }
     } elseif (isset($_POST['otp'])) {
@@ -120,8 +121,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Debug logging
             error_log("Verifying OTP: " . $otp . " for email: " . $email);
             
-            // Verify OTP with proper date comparison
-            $query = "SELECT u.user_id, u.email, r.role_name, u.first_name, u.last_name, u.otp, u.otp_expiry 
+            // Verify OTP with proper date comparison and check patient approval status
+            $query = "SELECT u.user_id, u.email, u.username, r.role_name, u.first_name, u.last_name, u.otp, u.otp_expiry,
+                      CASE WHEN r.role_name = 'patient' THEN 
+                        (SELECT is_approved FROM patients p WHERE p.user_id = u.user_id)
+                      ELSE 1 END as is_approved
                       FROM users u
                       JOIN user_roles r ON u.role_id = r.role_id
                       WHERE u.email = :email AND u.is_active = 1";
@@ -138,29 +142,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 error_log("Stored OTP: " . $stored_otp . ", Expiry: " . $row['otp_expiry']);
                 
                 if ($stored_otp === $otp && $otp_expiry > time()) {
-                    // Clear OTP and set session
-                    $clear_query = "UPDATE users SET otp = NULL, otp_expiry = NULL, last_login = NOW() WHERE email = :email";
-                    $clear_stmt = $conn->prepare($clear_query);
-                    $clear_stmt->bindParam(":email", $email);
-                    $clear_stmt->execute();
-                    
-                    // Set session variables
-                    $_SESSION['user_id'] = $row['user_id'];
-                    $_SESSION['email'] = $row['email'];
-                    $_SESSION['role'] = $row['role_name'];
-                    $_SESSION['name'] = $row['first_name'] . " " . $row['last_name'];
-                    
-                    unset($_SESSION['temp_email']);
-                    
-                    // Redirect based on role
-                    if ($row['role_name'] == 'admin') {
-                        header("Location: admin/dashboard.php");
-                    } elseif ($row['role_name'] == 'health_worker') {
-                        header("Location: health_worker/dashboard.php");
+                    // Check if patient is approved
+                    if ($row['role_name'] === 'patient' && !$row['is_approved']) {
+                        $error = "Your account is pending approval. Please wait for admin approval.";
+                        $show_otp_form = true;
                     } else {
-                        header("Location: patient/dashboard.php");
+                        // Clear OTP and set session
+                        $clear_query = "UPDATE users SET otp = NULL, otp_expiry = NULL, last_login = NOW() WHERE email = :email";
+                        $clear_stmt = $conn->prepare($clear_query);
+                        $clear_stmt->bindParam(":email", $email);
+                        $clear_stmt->execute();
+                        
+                        // Set session variables
+                        $_SESSION['user_id'] = $row['user_id'];
+                        $_SESSION['email'] = $row['email'];
+                        $_SESSION['username'] = $row['username'];
+                        $_SESSION['role'] = $row['role_name'];
+                        $_SESSION['name'] = $row['first_name'] . " " . $row['last_name'];
+                        
+                        unset($_SESSION['temp_email']);
+                        
+                        // Redirect based on role
+                        if ($row['role_name'] == 'admin') {
+                            header("Location: admin/dashboard.php");
+                        } elseif ($row['role_name'] == 'health_worker') {
+                            header("Location: health_worker/dashboard.php");
+                        } else {
+                            header("Location: patient/dashboard.php");
+                        }
+                        exit;
                     }
-                    exit;
                 } else {
                     $error = $otp_expiry <= time() ? "OTP has expired" : "Invalid OTP";
                     $show_otp_form = true;
@@ -461,10 +472,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <?php endif; ?>
             
             <?php if(!$show_otp_form): ?>
-            <!-- Email Form -->
+            <!-- Email/Username Form -->
             <div class="form-group">
-                <label for="email"><i class="fas fa-envelope"></i> Email Address</label>
-                <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required>
+                <label for="identifier"><i class="fas fa-user"></i> Email or Username</label>
+                <input type="text" id="identifier" name="identifier" class="form-control" placeholder="Enter your email or username" required>
             </div>
             
             <div class="form-group">

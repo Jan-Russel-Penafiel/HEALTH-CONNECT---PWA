@@ -2,7 +2,7 @@
   "name": "HealthConnect",
   "short_name": "HealthConnect",
   "description": "Smart Mobile Application For Brgy. Health Center of Brgy. Poblacion President Quirino Sultan Kudarat",
-  "start_url": "https://aphid-major-dolphin.ngrok-free.app/connect/index.php",
+  "start_url": " https://aphid-major-dolphin.ngrok-free.app/connect/index.php",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4CAF50",

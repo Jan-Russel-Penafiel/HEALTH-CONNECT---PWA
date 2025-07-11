@@ -117,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch all patients with their latest medical record
-$query = "SELECT p.*, u.*, 
+$query = "SELECT p.*, u.*, p.is_approved,
           COALESCE(mr.visit_date, 'No visits') as last_visit,
           COALESCE(mr.diagnosis, 'No diagnosis') as last_diagnosis
           FROM patients p
@@ -127,6 +127,7 @@ $query = "SELECT p.*, u.*,
                      ROW_NUMBER() OVER (PARTITION BY patient_id ORDER BY visit_date DESC) as rn
               FROM medical_records
           ) mr ON mr.patient_id = p.patient_id AND mr.rn = 1
+          WHERE p.is_approved = 1
           ORDER BY u.last_name, u.first_name";
 $stmt = $conn->prepare($query);
 $stmt->execute();
@@ -745,6 +746,10 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <?php echo ' ' . htmlspecialchars($patient['middle_name'][0]) . '.'; ?>
                                 <?php endif; ?>
                             </h3>
+                            <div class="approval-status <?php echo $patient['is_approved'] ? 'status-approved' : 'status-pending'; ?>">
+                                <i class="fas <?php echo $patient['is_approved'] ? 'fa-check-circle' : 'fa-clock'; ?>"></i>
+                                <?php echo $patient['is_approved'] ? 'Approved' : 'Pending Approval'; ?>
+                            </div>
                            
                             <div class="demographics">
                                 <span>

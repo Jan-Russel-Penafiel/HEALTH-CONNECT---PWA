@@ -369,8 +369,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="patient_id">Patient</label>
-                        <select class="form-control" id="patient_id" name="patient_id" required>
-                            <option value="">Select Patient</option>
+                        <select class="form-control select2-patient" id="patient_id" name="patient_id" required>
+                            <option value="">Search for a patient...</option>
                             <?php foreach ($patients_list as $patient): ?>
                                 <option value="<?php echo $patient['patient_id']; ?>">
                                     <?php echo htmlspecialchars($patient['last_name'] . ', ' . $patient['first_name'] . ' (' . $patient['email'] . ')'); ?>
@@ -427,6 +427,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Select2 for patient selection
+        $('.select2-patient').select2({
+            dropdownParent: $('#addImmunizationModal'),
+            placeholder: 'Search for a patient...',
+            width: '100%',
+            theme: 'classic',
+            allowClear: true,
+            minimumInputLength: 1
+        });
+
         // Get all filter buttons and sections
         const filterButtons = document.querySelectorAll('.btn-filter');
         const sections = document.querySelectorAll('.immunization-section');
@@ -930,6 +940,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 align-items: flex-start;
                 gap: 0.25rem;
             }
+        }
+
+        /* Select2 Styles */
+        .select2-container--classic .select2-selection--single {
+            height: 38px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+
+        .select2-container--classic .select2-selection--single .select2-selection__rendered {
+            line-height: 36px;
+            padding-left: 12px;
+            color: #495057;
+        }
+
+        .select2-container--classic .select2-selection--single .select2-selection__arrow {
+            height: 36px;
+        }
+
+        .select2-container--classic .select2-search--dropdown .select2-search__field {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 6px 12px;
+        }
+
+        .select2-container--classic .select2-results__option--highlighted[aria-selected] {
+            background-color: #3498db;
+        }
+
+        .select2-container--classic .select2-results__option {
+            padding: 8px 12px;
+        }
+
+        .select2-container--classic .select2-dropdown {
+            border-color: #ced4da;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .select2-container--classic.select2-container--open .select2-selection--single {
+            border-color: #3498db;
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
         }
     </style>
 </body>
