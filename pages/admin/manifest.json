@@ -1,0 +1,41 @@
+{
+  "name": "HealthConnect Admin",
+  "short_name": "HC Admin",
+  "description": "Admin Panel for HealthConnect - Brgy. Health Center Management System",
+  "start_url": "/connect/pages/admin/dashboard.php",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4CAF50",
+  "orientation": "portrait",
+  "scope": "/connect/pages/admin/",
+  "icons": [
+    {
+      "src": "/connect/assets/images/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/connect/assets/images/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/connect/assets/images/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/connect/assets/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/connect/assets/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+} 

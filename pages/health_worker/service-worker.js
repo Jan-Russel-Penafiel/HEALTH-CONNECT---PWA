@@ -1,22 +1,23 @@
-// Service Worker for HealthConnect PWA
-const CACHE_VERSION = '1.0.2';
-const CACHE_NAME = `healthconnect-v${CACHE_VERSION}`;
+// Service Worker for HealthConnect Health Worker PWA
+const CACHE_VERSION = '1.0.3';
+const CACHE_NAME = `healthconnect-health-worker-v${CACHE_VERSION}`;
 const urlsToCache = [
-  './index.php',
-  './manifest.json',
-  './offline.html',
-  './assets/css/style.css',
-  './assets/js/app.js',
-  './assets/images/icon-192x192.png',
-  './assets/images/icon-512x512.png',
-  './assets/images/favicon-16x16.png',
-  './assets/images/favicon-32x32.png',
-  './assets/images/apple-touch-icon.png',
-  './assets/images/health-center.jpg'
+  '/connect/pages/health_worker/dashboard.php',
+  '/connect/pages/health_worker/appointments.php',
+  '/connect/pages/health_worker/patients.php',
+  '/connect/pages/health_worker/immunization.php',
+  '/connect/pages/health_worker/profile.php',
+  '/connect/pages/health_worker/done_appointments.php',
+  '/connect/assets/css/style.css',
+  '/connect/assets/js/app.js',
+  '/connect/assets/images/icon-192x192.png',
+  '/connect/assets/images/icon-512x512.png',
+  '/connect/assets/images/favicon-16x16.png',
+  '/connect/assets/images/favicon-32x32.png',
+  '/connect/assets/images/favicon.ico',
+  '/connect/assets/images/apple-touch-icon.png',
+  '/connect/offline.html'
 ];
-
-// Check for service worker updates more frequently
-const CHECK_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
 
 // Install event - cache essential assets
 self.addEventListener('install', event => {
@@ -46,7 +47,7 @@ self.addEventListener('activate', event => {
       caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames.map(cacheName => {
-            if (cacheName !== CACHE_NAME && cacheName.startsWith('healthconnect-')) {
+            if (cacheName !== CACHE_NAME && cacheName.startsWith('healthconnect-health-worker-')) {
               console.log('[ServiceWorker] Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
@@ -55,15 +56,6 @@ self.addEventListener('activate', event => {
       })
     ]).then(() => {
       console.log('[ServiceWorker] Activate completed');
-      // Notify all clients about the update
-      self.clients.matchAll().then(clients => {
-        clients.forEach(client => {
-          client.postMessage({
-            type: 'UPDATE_AVAILABLE',
-            version: CACHE_VERSION
-          });
-        });
-      });
     })
   );
 });
@@ -73,25 +65,6 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // For HTML requests, try network first to ensure fresh content
-        if (event.request.mode === 'navigate' || 
-            (event.request.method === 'GET' && 
-             event.request.headers.get('accept').includes('text/html'))) {
-          return fetch(event.request)
-            .then(networkResponse => {
-              // Cache the new version
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE_NAME).then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-              return networkResponse;
-            })
-            .catch(() => {
-              // Fallback to cache if network fails
-              return response || caches.match('./offline.html');
-            });
-        }
-
         // Cache hit - return response
         if (response) {
           return response;
@@ -120,7 +93,7 @@ self.addEventListener('fetch', event => {
           .catch(() => {
             // If both cache and network fail, show offline page for navigation requests
             if (event.request.mode === 'navigate') {
-              return caches.match('./offline.html');
+              return caches.match('/connect/offline.html');
             }
             
             // For image requests, return a placeholder
@@ -143,30 +116,10 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Enhanced auto-update mechanism
+// Handle skip waiting message
 self.addEventListener('message', event => {
-  if (event.data) {
-    // Handle manual update check
-    if (event.data.type === 'CHECK_UPDATE') {
-      console.log('[ServiceWorker] Manually checking for updates...');
-      self.registration.update()
-        .then(() => {
-          console.log('[ServiceWorker] Update check completed');
-          // Notify the client that the check was performed
-          event.source.postMessage({
-            type: 'UPDATE_CHECK_COMPLETED'
-          });
-        })
-        .catch(error => {
-          console.error('[ServiceWorker] Update check failed:', error);
-        });
-    }
-    
-    // Handle reload request
-    if (event.data.type === 'SKIP_WAITING') {
-      console.log('[ServiceWorker] Skip waiting requested');
-      self.skipWaiting();
-    }
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
 
@@ -185,4 +138,4 @@ const checkForUpdates = async () => {
 setTimeout(checkForUpdates, 5000);
 
 // Set up periodic update checks
-setInterval(checkForUpdates, CHECK_INTERVAL); 
+setInterval(checkForUpdates, 15 * 60 * 1000); // Check every 15 minutes 

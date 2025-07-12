@@ -1,5 +1,5 @@
 // Service Worker for HealthConnect PWA
-const CACHE_VERSION = '1.0.2';
+const CACHE_VERSION = '1.0.3';
 const CACHE_NAME = `healthconnect-v${CACHE_VERSION}`;
 const urlsToCache = [
   './index.php',
@@ -11,6 +11,7 @@ const urlsToCache = [
   './assets/images/icon-512x512.png',
   './assets/images/favicon-16x16.png',
   './assets/images/favicon-32x32.png',
+  './assets/images/favicon.ico',
   './assets/images/apple-touch-icon.png',
   './assets/images/health-center.jpg'
 ];

@@ -13,7 +13,13 @@
 <meta name="theme-color" content="#4CAF50">
 
 <!-- PWA Manifest -->
-<link rel="manifest" href="/connect/manifest.json">
+<?php
+// Determine which manifest to use based on the current path
+$current_path = $_SERVER['REQUEST_URI'];
+$manifest_path = (strpos($current_path, '/connect/pages/admin/') !== false) ? 
+    '/connect/pages/admin/manifest.json' : '/connect/manifest.json';
+?>
+<link rel="manifest" href="<?php echo $manifest_path; ?>"><?php // This dynamically selects the appropriate manifest file ?>
 
 <!-- CSS -->
 <link rel="stylesheet" href="/connect/assets/css/style.css">
@@ -40,9 +46,24 @@ if ('serviceWorker' in navigator) {
 
     // Then register the new service worker
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/connect/service-worker.js')
+        // Determine if we're in the admin section
+        const isAdmin = window.location.pathname.includes('/connect/pages/admin/');
+        
+        // Set the appropriate service worker path and scope
+        let swPath, swScope;
+        
+        if (isAdmin) {
+            swPath = '/connect/pages/admin/service-worker.js';
+            swScope = '/connect/pages/admin/';
+        } else {
+            swPath = '/connect/service-worker.js';
+            swScope = '/connect/';
+        }
+        
+        // Register the service worker with the correct path and scope
+        navigator.serviceWorker.register(swPath, { scope: swScope })
             .then(registration => {
-                console.log('ServiceWorker registration successful');
+                console.log('ServiceWorker registration successful with scope:', registration.scope);
                 
                 // Check for updates
                 registration.addEventListener('updatefound', () => {

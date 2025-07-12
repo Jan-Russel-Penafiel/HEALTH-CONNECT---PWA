@@ -222,7 +222,22 @@ function initPWA() {
     // Register service worker for PWA functionality
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./service-worker.js')
+            // Determine if we're in the admin section
+            const isAdmin = window.location.pathname.includes('/connect/pages/admin/');
+            
+            // Set the appropriate service worker path and scope
+            let swPath, swScope;
+            
+            if (isAdmin) {
+                swPath = '/connect/pages/admin/service-worker.js';
+                swScope = '/connect/pages/admin/';
+            } else {
+                swPath = '/connect/service-worker.js';
+                swScope = '/connect/';
+            }
+            
+            // Register the service worker with the correct path and scope
+            navigator.serviceWorker.register(swPath, { scope: swScope })
                 .then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
                     
