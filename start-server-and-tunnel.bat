@@ -14,8 +14,8 @@ set path3=C:\xampp\htdocs\mic_new
 set project4=BSCAPS - Muhaimin
 set path4=C:\xampp\htdocs\pablo
 
-set project5=IMMUCARE
-set path5=C:\xampp\htdocs\mic_new
+set project5=KES_SMART - Ligo
+set path5=C:\xampp\htdocs\smart
 
 
 

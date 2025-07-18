@@ -47,7 +47,11 @@ self.addEventListener('activate', event => {
       caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames.map(cacheName => {
-            if (cacheName !== CACHE_NAME && cacheName.startsWith('healthconnect-')) {
+            if (cacheName !== STATIC_CACHE && 
+                cacheName !== DYNAMIC_CACHE && 
+                cacheName !== API_CACHE && 
+                cacheName !== OFFLINE_FALLBACKS && 
+                cacheName.startsWith('healthconnect-')) {
               console.log('[ServiceWorker] Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
