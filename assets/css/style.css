@@ -858,34 +858,6 @@ footer {
   }
 }
 
-/* PWA Install Button */
-.pwa-install {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    margin-right: 16px;
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s ease;
-}
-
-.pwa-install:hover {
-    background-color: var(--primary-dark);
-}
-
-.pwa-install i {
-    font-size: 16px;
-}
-
-.pwa-install.show {
-  display: flex;
-} 
-
 /* Admin Dashboard Styles */
 .stats-grid {
     display: grid;
@@ -1955,18 +1927,6 @@ footer {
 .nav-toggle.active {
   transform: rotate(90deg);
   transition: transform 0.3s ease;
-}
-
-/* PWA install button animation */
-.pwa-install {
-  transform: translateY(100%);
-  opacity: 0;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.pwa-install.show {
-  transform: translateY(0);
-  opacity: 1;
 }
 
 /* Toast notifications */

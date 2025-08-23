@@ -7,6 +7,10 @@ namespace Composer\Autoload;
 class ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db
 {
     public static $prefixLengthsPsr4 = array (
+        'h' => 
+        array (
+            'hollodotme\\FastCGI\\' => 19,
+        ),
         'c' => 
         array (
             'chillerlan\\Settings\\' => 20,
@@ -14,12 +18,24 @@ class ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db
         ),
         'S' => 
         array (
+            'Symfony\\Component\\Process\\' => 26,
             'Svg\\' => 4,
             'Sabberworm\\CSS\\' => 15,
         ),
+        'R' => 
+        array (
+            'Riverline\\MultiPartParser\\' => 26,
+        ),
         'P' => 
         array (
+            'Psr\\Http\\Server\\' => 16,
+            'Psr\\Http\\Message\\' => 17,
+            'Psr\\Container\\' => 14,
             'PHPMailer\\PHPMailer\\' => 20,
+        ),
+        'N' => 
+        array (
+            'Nyholm\\Psr7\\' => 12,
         ),
         'M' => 
         array (
@@ -33,9 +49,21 @@ class ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db
         array (
             'Dompdf\\' => 7,
         ),
+        'C' => 
+        array (
+            'Crwlr\\QueryString\\' => 18,
+        ),
+        'B' => 
+        array (
+            'Bref\\' => 5,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
+        'hollodotme\\FastCGI\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/hollodotme/fast-cgi-client/src',
+        ),
         'chillerlan\\Settings\\' => 
         array (
             0 => __DIR__ . '/..' . '/chillerlan/php-settings-container/src',
@@ -43,6 +71,10 @@ class ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db
         'chillerlan\\QRCode\\' => 
         array (
             0 => __DIR__ . '/..' . '/chillerlan/php-qrcode/src',
+        ),
+        'Symfony\\Component\\Process\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/process',
         ),
         'Svg\\' => 
         array (
@@ -52,9 +84,30 @@ class ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db
         array (
             0 => __DIR__ . '/..' . '/sabberworm/php-css-parser/src',
         ),
+        'Riverline\\MultiPartParser\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/riverline/multipart-parser/src',
+        ),
+        'Psr\\Http\\Server\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-server-handler/src',
+        ),
+        'Psr\\Http\\Message\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-factory/src',
+            1 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
+        'Psr\\Container\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/container/src',
+        ),
         'PHPMailer\\PHPMailer\\' => 
         array (
             0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
+        ),
+        'Nyholm\\Psr7\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/nyholm/psr7/src',
         ),
         'Masterminds\\' => 
         array (
@@ -67,6 +120,14 @@ class ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db
         'Dompdf\\' => 
         array (
             0 => __DIR__ . '/..' . '/dompdf/dompdf/src',
+        ),
+        'Crwlr\\QueryString\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/crwlr/query-string/src',
+        ),
+        'Bref\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/bref/bref/src',
         ),
     );
 

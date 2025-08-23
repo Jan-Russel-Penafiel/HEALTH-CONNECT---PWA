@@ -61,77 +61,98 @@ try {
     <title>Completed Appointments - HealthConnect</title>
     <?php include __DIR__ . '/../../includes/header_links.php'; ?>
     <style>
-        .appointments-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-            padding: 1.5rem 0;
-        }
-
-        .appointment-card {
+        /* Desktop Table Layout */
+        .table-container {
             background: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 1.5rem;
-            position: relative;
+            overflow: hidden;
+            margin-top: 1rem;
         }
 
-        .appointment-time {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 1.25rem;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 1rem;
-        }
-
-        .appointment-date {
-            color: #666;
+        .appointments-table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 0.9rem;
-            margin-bottom: 0.5rem;
         }
 
-        .patient-info {
-            margin-bottom: 1rem;
+        .appointments-table th {
+            background: #f8f9fa;
+            color: #495057;
+            font-weight: 600;
+            padding: 1rem 0.75rem;
+            text-align: left;
+            border-bottom: 2px solid #dee2e6;
+            white-space: nowrap;
         }
 
-        .patient-info h3 {
-            margin: 0 0 0.5rem 0;
+        .appointments-table td {
+            padding: 1rem 0.75rem;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+
+        .appointments-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .patient-name {
+            font-weight: 600;
             color: #2c3e50;
-            font-size: 1.1rem;
-        }
-
-        .contact-details {
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        .contact-details div {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
             margin-bottom: 0.25rem;
         }
 
-        .appointment-reason {
-            margin: 1rem 0;
-            padding: 0.75rem;
-            background: #f8f9fa;
-            border-radius: 4px;
-        }
-
-        .appointment-reason p {
-            margin: 0.5rem 0 0 0;
+        .contact-info {
+            font-size: 0.85rem;
             color: #666;
         }
 
+        .contact-info div {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .datetime-info {
+            white-space: nowrap;
+        }
+
+        .appointment-date {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.25rem;
+        }
+
+        .appointment-time {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .reason-cell {
+            max-width: 200px;
+            word-wrap: break-word;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            border-radius: 4px;
+        }
+
         .empty-state {
-            grid-column: 1 / -1;
             text-align: center;
             padding: 3rem;
             background: #f8f9fa;
             border-radius: 8px;
+            margin-top: 1rem;
         }
 
         .empty-state i {
@@ -162,9 +183,79 @@ try {
             gap: 1rem;
         }
 
-        @media (max-width: 768px) {
+        /* Mobile Card Layout */
+        .appointments-grid {
+            display: none;
+        }
+
+        @media (max-width: 991px) {
+            .table-container {
+                display: none;
+            }
+
             .appointments-grid {
+                display: grid;
                 grid-template-columns: 1fr;
+                gap: 1.5rem;
+                padding: 1.5rem 0;
+            }
+
+            .appointment-card {
+                background: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                padding: 1.5rem;
+                position: relative;
+            }
+
+            .appointment-time {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 1.25rem;
+                font-weight: bold;
+                color: #2c3e50;
+                margin-bottom: 1rem;
+            }
+
+            .appointment-date {
+                color: #666;
+                font-size: 0.9rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .patient-info {
+                margin-bottom: 1rem;
+            }
+
+            .patient-info h3 {
+                margin: 0 0 0.5rem 0;
+                color: #2c3e50;
+                font-size: 1.1rem;
+            }
+
+            .contact-details {
+                font-size: 0.9rem;
+                color: #666;
+            }
+
+            .contact-details div {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-bottom: 0.25rem;
+            }
+
+            .appointment-reason {
+                margin: 1rem 0;
+                padding: 0.75rem;
+                background: #f8f9fa;
+                border-radius: 4px;
+            }
+
+            .appointment-reason p {
+                margin: 0.5rem 0 0 0;
+                color: #666;
             }
         }
     </style>
@@ -182,48 +273,101 @@ try {
             </div>
         </div>
 
+        <?php if (empty($appointments)): ?>
+        <div class="empty-state">
+            <i class="fas fa-check-circle"></i>
+            <h3>No Completed Appointments</h3>
+            <p>There are no completed appointments to display.</p>
+        </div>
+        <?php else: ?>
+        
+        <!-- Desktop Table Layout -->
+        <div class="table-container">
+            <table class="appointments-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Patient Information</th>
+                        <th>Reason</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($appointments as $appointment): ?>
+                    <tr>
+                        <td>
+                            <div class="datetime-info">
+                                <div class="appointment-date">
+                                    <i class="fas fa-calendar"></i>
+                                    <?php echo date('M d, Y', strtotime($appointment['appointment_date'])); ?>
+                                </div>
+                                <div class="appointment-time">
+                                    <i class="fas fa-clock"></i>
+                                    <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="patient-name">
+                                <?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?>
+                            </div>
+                            <div class="contact-info">
+                                <div><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($appointment['email']); ?></div>
+                                <div><i class="fas fa-phone"></i> <?php echo htmlspecialchars($appointment['patient_phone']); ?></div>
+                            </div>
+                        </td>
+                        <td class="reason-cell">
+                            <?php echo htmlspecialchars($appointment['reason'] ?? 'N/A'); ?>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="view_appointment.php?id=<?php echo $appointment['id']; ?>" class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card Layout -->
         <div class="appointments-grid">
-            <?php if (empty($appointments)): ?>
-            <div class="empty-state">
-                <i class="fas fa-check-circle"></i>
-                <h3>No Completed Appointments</h3>
-                <p>There are no completed appointments to display.</p>
-            </div>
-            <?php else: ?>
-                <?php foreach ($appointments as $appointment): ?>
-                <div class="appointment-card">
-                    <div class="appointment-date">
-                        <i class="fas fa-calendar"></i>
-                        <span><?php echo date('F d, Y', strtotime($appointment['appointment_date'])); ?></span>
-                    </div>
-                    
-                    <div class="appointment-time">
-                        <i class="fas fa-clock"></i>
-                        <span><?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?></span>
-                    </div>
-                    
-                    <div class="patient-info">
-                        <h3><?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?></h3>
-                        <div class="contact-details">
-                            <div><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($appointment['email']); ?></div>
-                            <div><i class="fas fa-phone"></i> <?php echo htmlspecialchars($appointment['patient_phone']); ?></div>
-                        </div>
-                    </div>
-                    
-                    <div class="appointment-reason">
-                        <strong>Reason:</strong>
-                        <p><?php echo htmlspecialchars($appointment['reason'] ?? 'N/A'); ?></p>
-                    </div>
-                    
-                    <div class="appointment-actions">
-                        <a href="view_appointment.php?id=<?php echo $appointment['id']; ?>" class="btn btn-info w-100">
-                            <i class="fas fa-eye"></i> View Details
-                        </a>
+            <?php foreach ($appointments as $appointment): ?>
+            <div class="appointment-card">
+                <div class="appointment-date">
+                    <i class="fas fa-calendar"></i>
+                    <span><?php echo date('F d, Y', strtotime($appointment['appointment_date'])); ?></span>
+                </div>
+                
+                <div class="appointment-time">
+                    <i class="fas fa-clock"></i>
+                    <span><?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?></span>
+                </div>
+                
+                <div class="patient-info">
+                    <h3><?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?></h3>
+                    <div class="contact-details">
+                        <div><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($appointment['email']); ?></div>
+                        <div><i class="fas fa-phone"></i> <?php echo htmlspecialchars($appointment['patient_phone']); ?></div>
                     </div>
                 </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
+                
+                <div class="appointment-reason">
+                    <strong>Reason:</strong>
+                    <p><?php echo htmlspecialchars($appointment['reason'] ?? 'N/A'); ?></p>
+                </div>
+                
+                <div class="appointment-actions">
+                    <a href="view_appointment.php?id=<?php echo $appointment['id']; ?>" class="btn btn-info w-100">
+                        <i class="fas fa-eye"></i> View Details
+                    </a>
+                </div>
+            </div>
+            <?php endforeach; ?>
         </div>
+        <?php endif; ?>
     </div>
 
     <?php include __DIR__ . '/../../includes/footer.php'; ?>

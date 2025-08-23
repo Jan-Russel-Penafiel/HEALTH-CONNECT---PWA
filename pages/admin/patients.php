@@ -86,59 +86,93 @@ try {
 
 // Handle form submission for adding new patient
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_patient') {
-    try {
-        $conn->beginTransaction();
+    // Get user input
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
+    $first_name = trim($_POST['first_name']);
+    $middle_name = trim($_POST['middle_name'] ?? '');
+    $last_name = trim($_POST['last_name']);
+    $gender = trim($_POST['gender']);
+    $date_of_birth = trim($_POST['date_of_birth']);
+    $mobile_number = trim($_POST['mobile_number']);
+    $address = trim($_POST['address']);
+    $blood_type = trim($_POST['blood_type']);
+    $height = trim($_POST['height']);
+    $weight = trim($_POST['weight']);
+    $emergency_contact_name = trim($_POST['emergency_contact_name']);
+    $emergency_contact_number = trim($_POST['emergency_contact_number']);
+    $emergency_contact_relationship = trim($_POST['emergency_contact_relationship']);
 
-        // Get role_id for patient
-        $stmt = $conn->prepare("SELECT role_id FROM user_roles WHERE role_name = 'patient'");
-        $stmt->execute();
-        $role_id = $stmt->fetchColumn();
+    // Validate required fields
+    if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || empty($gender) || empty($date_of_birth)) {
+        $_SESSION['error'] = "Please fill in all required fields.";
+    } else {
+        try {
+            $conn->beginTransaction();
 
-        // Insert into users table
-        $stmt = $conn->prepare("INSERT INTO users (role_id, username, email, mobile_number, first_name, middle_name, 
-                              last_name, gender, date_of_birth, address) 
-                              VALUES (:role_id, :username, :email, :mobile_number, :first_name, :middle_name, 
-                              :last_name, :gender, :date_of_birth, :address)");
-        
-        $stmt->execute([
-            ':role_id' => $role_id,
-            ':username' => $_POST['email'], // Using email as username
-            ':email' => $_POST['email'],
-            ':mobile_number' => $_POST['mobile_number'],
-            ':first_name' => $_POST['first_name'],
-            ':middle_name' => $_POST['middle_name'],
-            ':last_name' => $_POST['last_name'],
-            ':gender' => $_POST['gender'],
-            ':date_of_birth' => $_POST['date_of_birth'],
-            ':address' => $_POST['address']
-        ]);
+            // Check if username already exists
+            $check_query = "SELECT COUNT(*) FROM users WHERE username = :username";
+            $check_stmt = $conn->prepare($check_query);
+            $check_stmt->bindParam(":username", $username);
+            $check_stmt->execute();
+            if ($check_stmt->fetchColumn() > 0) {
+                $_SESSION['error'] = "Username already exists. Please choose another.";
+                $conn->rollBack();
+            } else {
+                // Check if email already exists
+                $check_query = "SELECT COUNT(*) FROM users WHERE email = :email";
+                $check_stmt = $conn->prepare($check_query);
+                $check_stmt->bindParam(":email", $email);
+                $check_stmt->execute();
+                if ($check_stmt->fetchColumn() > 0) {
+                    $_SESSION['error'] = "Email already exists. Please use another or login.";
+                    $conn->rollBack();
+                } else {
+                    // Get role_id for patient
+                    $stmt = $conn->prepare("SELECT role_id FROM user_roles WHERE role_name = 'patient'");
+                    $stmt->execute();
+                    $role_id = $stmt->fetchColumn();
 
-        $user_id = $conn->lastInsertId();
+                    // Insert into users table
+                    $stmt = $conn->prepare("INSERT INTO users (role_id, username, email, mobile_number, first_name, middle_name, last_name, gender, date_of_birth, address) VALUES (:role_id, :username, :email, :mobile_number, :first_name, :middle_name, :last_name, :gender, :date_of_birth, :address)");
+                    $stmt->execute([
+                        ':role_id' => $role_id,
+                        ':username' => $username,
+                        ':email' => $email,
+                        ':mobile_number' => $mobile_number,
+                        ':first_name' => $first_name,
+                        ':middle_name' => $middle_name,
+                        ':last_name' => $last_name,
+                        ':gender' => $gender,
+                        ':date_of_birth' => $date_of_birth,
+                        ':address' => $address
+                    ]);
 
-        // Insert into patients table
-        $stmt = $conn->prepare("INSERT INTO patients (user_id, blood_type, height, weight, 
-                              emergency_contact_name, emergency_contact_number, emergency_contact_relationship) 
-                              VALUES (:user_id, :blood_type, :height, :weight, 
-                              :emergency_contact_name, :emergency_contact_number, :emergency_contact_relationship)");
-        
-        $stmt->execute([
-            ':user_id' => $user_id,
-            ':blood_type' => $_POST['blood_type'],
-            ':height' => $_POST['height'],
-            ':weight' => $_POST['weight'],
-            ':emergency_contact_name' => $_POST['emergency_contact_name'],
-            ':emergency_contact_number' => $_POST['emergency_contact_number'],
-            ':emergency_contact_relationship' => $_POST['emergency_contact_relationship']
-        ]);
+                    $user_id = $conn->lastInsertId();
 
-        $conn->commit();
-        $_SESSION['success'] = "Patient added successfully.";
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit();
-    } catch (PDOException $e) {
-        $conn->rollBack();
-        error_log("Error adding patient: " . $e->getMessage());
-        $_SESSION['error'] = "Error adding patient. Please try again.";
+                    // Insert into patients table
+                    $stmt = $conn->prepare("INSERT INTO patients (user_id, blood_type, height, weight, emergency_contact_name, emergency_contact_number, emergency_contact_relationship, is_approved, approved_at) VALUES (:user_id, :blood_type, :height, :weight, :emergency_contact_name, :emergency_contact_number, :emergency_contact_relationship, 1, NOW())");
+                    $stmt->execute([
+                        ':user_id' => $user_id,
+                        ':blood_type' => $blood_type,
+                        ':height' => $height,
+                        ':weight' => $weight,
+                        ':emergency_contact_name' => $emergency_contact_name,
+                        ':emergency_contact_number' => $emergency_contact_number,
+                        ':emergency_contact_relationship' => $emergency_contact_relationship
+                    ]);
+
+                    $conn->commit();
+                    $_SESSION['success'] = "Patient added successfully.";
+                    header('Location: ' . $_SERVER['PHP_SELF']);
+                    exit();
+                }
+            }
+        } catch (PDOException $e) {
+            $conn->rollBack();
+            error_log("Error adding patient: " . $e->getMessage());
+            $_SESSION['error'] = "Error adding patient. Please try again.";
+        }
     }
 }
 
@@ -151,6 +185,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <title>Patients Management</title>
     <?php include __DIR__ . '/../../includes/header_links.php'; ?>
     <style>
+        /* Desktop Table View */
+        .desktop-table {
+            display: none;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+        }
+        
+        .data-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .table-actions .btn-action {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .table-actions .btn-view {
+            background: #2196F3;
+        }
+        
+        .table-actions .btn-edit {
+            background: #4CAF50;
+        }
+        
+        .table-actions .btn-approve {
+            background: #4CAF50;
+        }
+        
+        .table-actions .btn-delete {
+            background: #F44336;
+        }
+        
+        .table-actions .btn-action:hover {
+            opacity: 0.9;
+        }
+        
+        .approval-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+        
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        /* Mobile Cards View */
+        .mobile-cards {
+            display: block;
+        }
+        
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -369,6 +498,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             background-color: #fff3cd;
             color: #856404;
         }
+
+        /* Desktop Layout */
+        @media (min-width: 769px) {
+            .desktop-table {
+                display: block;
+            }
+            
+            .mobile-cards {
+                display: none;
+            }
+        }
+
+        /* Mobile Layout */
+        @media (max-width: 768px) {
+            .desktop-table {
+                display: none;
+            }
+            
+            .mobile-cards {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
@@ -504,7 +655,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
         <?php endif; ?>
 
-        <div class="cards-grid">
+        <!-- Desktop Table View -->
+        <div class="desktop-table">
+            <?php if (!empty($patients)): ?>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Mobile</th>
+                            <th>Blood Type</th>
+                            <th>Appointments</th>
+                            <th>Immunizations</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($patients as $patient): ?>
+                            <tr>
+                                <td>
+                                    <strong>
+                                        <?php echo htmlspecialchars($patient['last_name'] . ', ' . $patient['first_name']); ?>
+                                        <?php if ($patient['middle_name']): ?>
+                                            <?php echo ' ' . htmlspecialchars($patient['middle_name'][0]) . '.'; ?>
+                                        <?php endif; ?>
+                                    </strong>
+                                </td>
+                                <td><?php echo htmlspecialchars($patient['email']); ?></td>
+                                <td><?php echo htmlspecialchars($patient['mobile_number']); ?></td>
+                                <td><?php echo htmlspecialchars($patient['blood_type'] ?: 'Not specified'); ?></td>
+                                <td><?php echo $patient['appointment_count']; ?></td>
+                                <td><?php echo $patient['immunization_count']; ?></td>
+                                <td>
+                                    <span class="approval-status <?php echo $patient['is_approved'] ? 'status-approved' : 'status-pending'; ?>">
+                                        <i class="fas <?php echo $patient['is_approved'] ? 'fa-check-circle' : 'fa-clock'; ?>"></i>
+                                        <?php echo $patient['is_approved'] ? 'Approved' : 'Pending'; ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <a href="view_patient.php?id=<?php echo $patient['patient_id']; ?>" class="btn-action btn-view">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        <a href="edit_patient.php?id=<?php echo $patient['patient_id']; ?>" class="btn-action btn-edit">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <?php if (!$patient['is_approved']): ?>
+                                            <button class="btn-action btn-approve" onclick="approvePatient(<?php echo $patient['user_id']; ?>)">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                        <?php endif; ?>
+                                        <button class="btn-action btn-delete" onclick="confirmDelete(<?php echo $patient['user_id']; ?>)">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <div class="empty-state">
+                    <i class="fas fa-users fa-3x"></i>
+                    <h3>No Patients Found</h3>
+                    <p><?php echo !empty($search) ? 'No patients match your search criteria.' : 'No patients registered yet.'; ?></p>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Mobile Cards View -->
+        <div class="mobile-cards">
+            <div class="cards-grid">
             <?php if (!empty($patients)): ?>
                 <?php foreach ($patients as $patient): ?>
                     <div class="patient-card">
@@ -586,6 +808,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <p>Click the "Add Patient" button to add a new patient.</p>
                 </div>
             <?php endif; ?>
+            </div>
         </div>
 
         <?php if ($total_pages > 1): ?>
@@ -613,10 +836,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <div class="modal" id="addPatientModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Add Health Worker</h3>
+                <h3 style="color: #4CAF50";>Add Patient</h3>
                 <span class="close">&times;</span>
             </div>
             <form id="addPatientForm" method="POST">
+                <input type="hidden" name="action" value="add_patient">
                 <div class="form-row">
                     <div class="form-group">
                         <label for="first_name">First Name</label>
@@ -636,8 +860,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     </div>
 
                     <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
                         <label for="email">Email</label>
                         <input type="email" id="email" name="email" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" class="form-control" required>
                     </div>
                 </div>
 

@@ -50,11 +50,172 @@ session_start();
     </script>
     
     <style>
+        /* Hide any update/install prompts or banners */
+        .update-notification,
+        .update-banner,
+        .version-banner,
+        .install-prompt,
+        .pwa-install,
+        .install-banner,
+        [class*="update-"],
+        [class*="install-"],
+        [class*="version-"],
+        [id*="update"],
+        [id*="install"],
+        [id*="version"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        
         /* Additional styles for enhanced UI */
         body {
             font-family: 'Poppins', sans-serif;
             padding-bottom: 70px; /* Add space for footer nav */
             padding-top: 60px; /* Match header height */
+        }
+        
+        /* Top Navbar Styles */
+        .top-navbar {
+            background: #fff;
+            padding: 0.5rem 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 56px;
+        }
+
+        .top-navbar .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
+            padding: 0 20px;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .navbar-brand img {
+            height: 24px;
+            margin-right: 8px;
+        }
+
+        /* Desktop Navigation */
+        .desktop-nav {
+            display: none;
+            flex: 1;
+            margin-left: 2rem;
+        }
+
+        .main-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .main-nav .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            color: #666;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .main-nav .nav-link i {
+            font-size: 0.9rem;
+        }
+
+        .main-nav .nav-link:hover {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .main-nav .nav-link.active {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.15);
+            font-weight: 600;
+        }
+
+        /* Auth Menu */
+        .auth-menu {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .auth-link {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            color: #666;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .auth-link:hover {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .auth-link.register-btn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .auth-link.register-btn:hover {
+            background: #388E3C;
+            color: white;
+        }
+
+        /* Desktop Layout */
+        @media (min-width: 769px) {
+            .desktop-nav, .auth-menu {
+                display: flex;
+            }
+            
+            .footer-nav {
+                display: none;
+            }
+            
+            body {
+                padding-bottom: 0;
+                padding-top: 56px;
+            }
+        }
+
+        /* Mobile Layout */
+        @media (max-width: 768px) {
+            .desktop-nav, .auth-menu {
+                display: none;
+            }
+            
+            .top-navbar {
+                height: 48px;
+            }
+            
+            body {
+                padding-top: 48px;
+            }
         }
         
         .header-content {
@@ -98,6 +259,10 @@ session_start();
             background-size: cover;
             background-position: center;
             position: relative;
+            padding: 40px 0 60px 0;
+            min-height: 70vh;
+            display: flex;
+            align-items: center;
         }
         
         .hero::before {
@@ -449,35 +614,199 @@ session_start();
             transform: translateY(-3px);
         }
         
+        /* Role Selection Modal */
+        .role-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+
+        .role-modal.show {
+            display: flex;
+        }
+
+        .role-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 350px;
+            width: 100%;
+            position: relative;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .role-modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .role-modal-header h2 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .role-modal-header p {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .role-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.2s;
+        }
+
+        .role-close:hover {
+            color: #333;
+        }
+
+        .role-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .role-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .role-card:hover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.05);
+            transform: translateY(-2px);
+            color: #333;
+            text-decoration: none;
+        }
+
+        .role-card i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+
+        .role-card h3 {
+            margin-bottom: 5px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .role-card p {
+            font-size: 0.75rem;
+            color: #666;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .role-card.admin i {
+            color: #FF5722;
+        }
+
+        .role-card.admin:hover {
+            border-color: #FF5722;
+            background: rgba(255, 87, 34, 0.05);
+        }
+
+        .role-card.health-worker i {
+            color: #2196F3;
+        }
+
+        .role-card.health-worker:hover {
+            border-color: #2196F3;
+            background: rgba(33, 150, 243, 0.05);
+        }
+
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2.5rem;
+            .role-modal-content {
+                padding: 20px 15px;
+                margin: 0 15px;
             }
-            
-            .hero p {
-                font-size: 1.1rem;
+
+            .role-modal-header h2 {
+                font-size: 1.2rem;
             }
-            
-            .about-content {
-                flex-direction: column;
-            }
-            
-            .about-image {
-                min-height: 250px;
+
+            .role-modal-header p {
+                font-size: 0.8rem;
             }
         }
     </style>
 </head>
 <body>
     <!-- Header -->
-    <header>
-        <div class="header-content container">
-            <div class="logo">
-                <img src="assets/images/health-center.jpg" alt="HealthConnect Logo">
-                <h1>HealthConnect</h1>
+    <nav class="top-navbar">
+        <div class="container">
+            <a href="/connect/" class="navbar-brand">
+                <img src="/connect/assets/images/health-center.jpg" alt="HealthConnect">
+                HealthConnect
+            </a>
+            
+            <!-- Desktop Navigation -->
+            <div class="desktop-nav">
+                <nav class="main-nav">
+                    <a href="/connect/index.php#home" class="nav-link active">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="/connect/index.php#features" class="nav-link">
+                        <i class="fas fa-list-ul"></i>
+                        <span>Features</span>
+                    </a>
+                    <a href="/connect/index.php#about" class="nav-link">
+                        <i class="fas fa-info-circle"></i>
+                        <span>About</span>
+                    </a>
+                    <a href="/connect/index.php#contact" class="nav-link">
+                        <i class="fas fa-envelope"></i>
+                        <span>Contact</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="auth-menu">
+                <a href="#" class="auth-link" onclick="showRoleSelection()">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Login</span>
+                </a>
+                <a href="/connect/pages/register.php" class="auth-link register-btn">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Register</span>
+                </a>
             </div>
         </div>
-    </header>
+    </nav>
     
     <!-- Hero Section -->
     <section id="home" class="hero">
@@ -486,7 +815,7 @@ session_start();
             <p>HealthConnect connects you to Brgy. Poblacion Health Center services, making healthcare accessible right from your mobile device. Schedule appointments, track immunizations, and access your medical records with ease.</p>
             <div class="hero-buttons">
                 <a href="pages/register.php" class="btn">Register Now</a>
-                <a href="pages/login.php" class="btn btn-outline">Login</a>
+                <a href="#" class="btn btn-outline" onclick="showRoleSelection()">Login</a>
             </div>
         </div>
     </section>
@@ -625,10 +954,10 @@ session_start();
                 <div class="footer-column">
                     <h3>Services</h3>
                     <ul class="footer-links">
-                        <li><a href="#">Appointments</a></li>
-                        <li><a href="#">Medical Records</a></li>
-                        <li><a href="#">Immunization</a></li>
-                        <li><a href="#">Health Programs</a></li>
+                        <li><a href="pages/appointments.php">Appointments</a></li>
+                        <li><a href="pages/medical_records.php">Medical Records</a></li>
+                        <li><a href="pages/immunization.php">Immunization</a></li>
+                        <li><a href="pages/health_programs.php">Health Programs</a></li>
                     </ul>
                 </div>
                 
@@ -667,7 +996,7 @@ session_start();
                 <i class="fas fa-envelope"></i>
                 <span>Contact</span>
             </a>
-            <a href="pages/login.php" class="footer-nav-item ">
+            <a href="pages/login.php" class="footer-nav-item">
                 <i class="fas fa-user"></i>
                 <span>Login</span>
             </a>
@@ -678,6 +1007,34 @@ session_start();
         </div>
     </div>
     
+    <!-- Role Selection Modal -->
+    <div class="role-modal" id="roleModal">
+        <div class="role-modal-content">
+            <span class="role-close" onclick="hideRoleSelection()">&times;</span>
+            <div class="role-modal-header">
+                <h2>Select Your Role</h2>
+                <p>Choose how you want to access HealthConnect</p>
+            </div>
+            <div class="role-grid">
+                <a href="pages/login.php?role=admin" class="role-card admin">
+                    <i class="fas fa-user-shield"></i>
+                    <h3>Administrator</h3>
+                    <p>Manage the health center system, users, and reports</p>
+                </a>
+                <a href="pages/login.php?role=health_worker" class="role-card health-worker">
+                    <i class="fas fa-user-md"></i>
+                    <h3>Health Worker</h3>
+                    <p>Manage appointments, patient records, and immunizations</p>
+                </a>
+                <a href="pages/login.php?role=patient" class="role-card patient">
+                    <i class="fas fa-user"></i>
+                    <h3>Patient</h3>
+                    <p>Book appointments, view medical records, and track health</p>
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- PWA Install Button -->
     <div class="pwa-install">
         <i class="fas fa-download"></i> Install App
@@ -687,6 +1044,31 @@ session_start();
     <script src="assets/js/app.js"></script>
     
     <script>
+        // Role Selection Modal Functions
+        function showRoleSelection() {
+            document.getElementById('roleModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideRoleSelection() {
+            document.getElementById('roleModal').classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('roleModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideRoleSelection();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideRoleSelection();
+            }
+        });
+
         // Simple form submission handling
         document.getElementById('contactForm').addEventListener('submit', function(e) {
             e.preventDefault();

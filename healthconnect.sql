@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 11, 2025 at 06:03 PM
+-- Generation Time: Jul 25, 2025 at 10:17 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -215,7 +215,10 @@ INSERT INTO `patients` (`patient_id`, `user_id`, `blood_type`, `height`, `weight
 (1, 3, 'A+', 165.00, 52.00, 'Jan Russel asdadgd Peñafiel', '09677726912', 'asdada', '2025-07-09 13:13:49', '2025-07-11 15:14:43', 1, '2025-07-11 15:14:43'),
 (2, 4, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-11 11:50:00', '2025-07-11 15:14:43', 1, '2025-07-11 15:14:43'),
 (3, 5, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-11 11:51:33', '2025-07-11 15:14:43', 1, '2025-07-11 15:14:43'),
-(4, 6, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-11 15:27:31', '2025-07-11 15:59:06', 1, '2025-07-11 15:59:06');
+(4, 6, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-11 15:27:31', '2025-07-11 15:59:06', 1, '2025-07-11 15:59:06'),
+(5, 7, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-12 15:07:55', '2025-07-12 15:12:53', 1, '2025-07-12 15:12:53'),
+(6, 8, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-21 12:50:35', '2025-07-21 12:50:35', 0, NULL),
+(7, 9, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-21 12:50:55', '2025-07-21 12:50:55', 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -295,6 +298,7 @@ CREATE TABLE `users` (
   `role_id` int(11) DEFAULT NULL,
   `username` varchar(50) NOT NULL,
   `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
   `mobile_number` varchar(20) DEFAULT NULL,
   `first_name` varchar(100) NOT NULL,
   `middle_name` varchar(100) DEFAULT NULL,
@@ -315,13 +319,16 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`user_id`, `role_id`, `username`, `email`, `mobile_number`, `first_name`, `middle_name`, `last_name`, `gender`, `date_of_birth`, `address`, `profile_picture`, `is_active`, `last_login`, `otp`, `otp_expiry`, `created_at`, `updated_at`) VALUES
-(1, 1, 'admin', 'penafielliezl1122@gmail.com', NULL, 'System', NULL, 'Admin', 'Other', NULL, NULL, NULL, 1, '2025-07-11 23:47:32', NULL, NULL, '2025-07-09 12:04:56', '2025-07-11 15:47:32'),
-(2, 2, 'test', 'russeljan5555@gmail.com', '09677726912', 'Jan Russel', 'asdadgd', 'Peñafiel', 'Male', NULL, '', NULL, 1, '2025-07-11 23:41:23', NULL, NULL, '2025-07-09 12:54:19', '2025-07-11 15:41:23'),
-(3, 3, 'penafielliezl9999@gmail.com', 'janrusselpenafiel01172005@gmail.com', '09677726912', 'Jan Russel', 'asdadgd', 'Peñafiel', 'Male', '2005-01-20', 'Panay Santo Niño South Cotabato', NULL, 1, '2025-07-11 15:55:17', '325320', '2025-07-11 17:49:32', '2025-07-09 13:13:49', '2025-07-11 15:39:32'),
-(4, 3, 'Jaspherjohn', 'jasperjohnamoguis@sksu.edu.ph', '09317102542', 'Jaspherjohn', 'Canlas', 'Amoguis', 'Male', '2005-02-15', 'Brgy.tina purok santan tomboc subdiv. Tacurong City', NULL, 1, '2025-07-11 19:51:07', NULL, NULL, '2025-07-11 11:50:00', '2025-07-11 11:51:07'),
-(5, 3, 'jerome', 'razuljerome@gmail.com', '09263232987', 'Razul Jerome', 'Azarcon', 'Andal', 'Male', '2003-08-24', 'brgy,mars planet jupiter', NULL, 1, NULL, '532884', '2025-07-11 14:06:41', '2025-07-11 11:51:33', '2025-07-11 11:56:41'),
-(6, 3, 'Russel', 'penafielliezl9999@gmail.com', '09677726912', 'Jan Russels', 'Elizares', 'Peñafiel', 'Male', '2005-07-14', 'Purok Paghidaet 1&2 Panay Santo Nino South Cotabato', NULL, 1, NULL, '368342', '2025-07-11 17:49:57', '2025-07-11 15:27:31', '2025-07-11 15:39:57');
+INSERT INTO `users` (`user_id`, `role_id`, `username`, `email`, `password`, `mobile_number`, `first_name`, `middle_name`, `last_name`, `gender`, `date_of_birth`, `address`, `profile_picture`, `is_active`, `last_login`, `otp`, `otp_expiry`, `created_at`, `updated_at`) VALUES
+(1, 1, 'admin', 'penafielliezl1122@gmail.com', 'admin123', NULL, 'System', NULL, 'Admin', 'Other', NULL, NULL, NULL, 1, '2025-07-25 11:11:50', NULL, NULL, '2025-07-09 12:04:56', '2025-07-25 03:11:50'),
+(2, 2, 'test', 'russeljan5555@gmail.com', 'test123', '09677726912', 'Jan Russel', 'asdadgd', 'Peñafiel', 'Male', NULL, '', NULL, 1, '2025-07-25 13:49:14', NULL, NULL, '2025-07-09 12:54:19', '2025-07-25 05:49:14'),
+(3, 3, 'penafielliezl9999@gmail.com', 'janrusselpenafiel01172005@gmail.com', 'patient123', '09677726912', 'Jan Russel', 'asdadgd', 'Peñafiel', 'Male', '2005-01-20', 'Panay Santo Niño South Cotabato', NULL, 1, '2025-07-23 11:32:27', NULL, NULL, '2025-07-09 13:13:49', '2025-07-23 03:32:27'),
+(4, 3, 'Jaspherjohn', 'jasperjohnamoguis@sksu.edu.ph', 'jaspher123', '09317102542', 'Jaspherjohn', 'Canlas', 'Amoguis', 'Male', '2005-02-15', 'Brgy.tina purok santan tomboc subdiv. Tacurong City', NULL, 1, '2025-07-11 19:51:07', NULL, NULL, '2025-07-11 11:50:00', '2025-07-11 11:51:07'),
+(5, 3, 'jerome', 'razuljerome@gmail.com', 'jerome123', '09263232987', 'Razul Jerome', 'Azarcon', 'Andal', 'Male', '2003-08-24', 'brgy,mars planet jupiter', NULL, 1, NULL, '532884', '2025-07-11 14:06:41', '2025-07-11 11:51:33', '2025-07-11 11:56:41'),
+(6, 3, 'Russel', 'penafielliezl9999@gmail.com', 'russel123', '09677726912', 'Jan Russels', 'Elizares', 'Peñafiel', 'Male', '2005-07-14', 'Purok Paghidaet 1&2 Panay Santo Nino South Cotabato', NULL, 1, NULL, '368342', '2025-07-11 17:49:57', '2025-07-11 15:27:31', '2025-07-11 15:39:57'),
+(7, 3, 'Stepanot', 'artiedastephany@gmail.com', 'stepanot123', '09555113835', 'Stephany', '', 'Artieda', 'Other', '2025-07-16', 'Ufhc', NULL, 1, '2025-07-12 23:43:00', NULL, NULL, '2025-07-12 15:07:55', '2025-07-12 15:43:00'),
+(8, 3, 'Alimar', 'baguanshalimar1@gmail.com', 'alimar123', '09978740592', 'Shalimar', 'P', 'Baguan', 'Male', '2002-02-06', 'Poblacion president quirino sultan kudarat', NULL, 1, NULL, '390358', '2025-07-21 15:04:50', '2025-07-21 12:50:35', '2025-07-21 12:54:50'),
+(9, 3, 'Nicko', 'nickokundi@gmail.com', 'nicko123', '09932603608', 'Nicko', 'K', 'Navarro', 'Male', '2003-12-09', 'Datu paglas', NULL, 1, NULL, '419840', '2025-07-21 15:03:58', '2025-07-21 12:50:55', '2025-07-21 12:53:58');
 
 -- --------------------------------------------------------
 
@@ -475,13 +482,13 @@ ALTER TABLE `medical_records`
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `settings`
 --
 ALTER TABLE `settings`
-  MODIFY `setting_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
+  MODIFY `setting_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=86;
 
 --
 -- AUTO_INCREMENT for table `sms_logs`
@@ -493,7 +500,7 @@ ALTER TABLE `sms_logs`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `user_roles`

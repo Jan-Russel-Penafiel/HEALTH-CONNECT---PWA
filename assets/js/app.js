@@ -2,6 +2,48 @@
 
 // Wait for the DOM to load
 document.addEventListener('DOMContentLoaded', function() {
+    // Remove any existing install prompts and update banners
+    const existingPrompts = document.querySelectorAll('.install-prompt, .update-notification, .update-banner, .version-banner, [class*="update"], [class*="install"], [class*="version"]');
+    existingPrompts.forEach(prompt => prompt.remove());
+    
+    // Clean up any previous installation-related localStorage and update-related storage
+    localStorage.removeItem('iosPromptShown');
+    localStorage.removeItem('iosPromptDismissed');
+    localStorage.removeItem('desktopPromptShown');
+    localStorage.removeItem('desktopPromptDismissed');
+    localStorage.removeItem('androidPromptShown');
+    localStorage.removeItem('androidPromptDismissed');
+    localStorage.removeItem('updateAvailable');
+    localStorage.removeItem('updateTimestamp');
+    localStorage.removeItem('swUpdateAvailable');
+    localStorage.removeItem('newVersionAvailable');
+    localStorage.removeItem('pendingUpdate');
+    
+    // Clean up session storage as well
+    sessionStorage.removeItem('updateAvailable');
+    sessionStorage.removeItem('updateTimestamp');
+    sessionStorage.removeItem('swUpdateAvailable');
+    sessionStorage.removeItem('newVersionAvailable');
+    sessionStorage.removeItem('pendingUpdate');
+    
+    // Remove any dynamically created update/install elements
+    setTimeout(() => {
+        const updateElements = document.querySelectorAll('[id*="update"], [id*="install"], [id*="version"], [class*="update"], [class*="install"], [class*="version"]');
+        updateElements.forEach(element => {
+            if (element.textContent && (
+                element.textContent.includes('New version') ||
+                element.textContent.includes('Update available') ||
+                element.textContent.includes('Install') ||
+                element.textContent.includes('Add to Home') ||
+                element.textContent.includes('Chrome:') ||
+                element.textContent.includes('Edge:') ||
+                element.textContent.includes('Firefox:')
+            )) {
+                element.remove();
+            }
+        });
+    }, 1000);
+    
     // Initialize mobile navigation
     initMobileNav();
     
@@ -217,6 +259,11 @@ function initScrollAnimations() {
     }
 }
 
+// Check for pending updates on page load - removed as auto-update handles this
+function checkForPendingUpdate() {
+    // Auto-update system handles updates automatically - no user intervention needed
+}
+
 // PWA functionality
 function initPWA() {
     // Register service worker for PWA functionality
@@ -241,33 +288,34 @@ function initPWA() {
                 .then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
                     
-                    // Check for updates periodically
-                    setInterval(() => {
-                        registration.update()
-                            .then(() => console.log('Periodic update check triggered'));
-                    }, 30 * 60 * 1000); // Check every 30 minutes
-                    
-                    // Listen for new service worker installation
+                    // Listen for new service worker installation (auto-update)
                     registration.addEventListener('updatefound', () => {
-                        // Get the installing service worker
                         const newWorker = registration.installing;
-                        console.log('[PWA] New service worker installing');
+                        console.log('[PWA] New service worker installing - auto-updating');
                         
-                        // Listen for state changes
                         newWorker.addEventListener('statechange', () => {
                             console.log('[PWA] Service worker state change:', newWorker.state);
                             
-                            // When the service worker is installed
                             if (newWorker.state === 'installed') {
-                                // Check if there's a controller (meaning this isn't the first install)
                                 if (navigator.serviceWorker.controller) {
-                                    console.log('[PWA] New content is available; please refresh.');
-                                    
-                                    // Show update notification to user
-                                    showUpdateNotification();
+                                    console.log('[PWA] New content available - requesting activation');
+                                    // Send message to new service worker to skip waiting
+                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                } else {
+                                    console.log('[PWA] Content is cached for the first time');
                                 }
                             }
+                            
+                            if (newWorker.state === 'activated') {
+                                console.log('[PWA] New service worker activated');
+                            }
                         });
+                    });
+                    
+                    // Listen for the controlling service worker changing
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        console.log('[PWA] Controller changed - app updated automatically');
+                        // Auto-update system handles everything automatically
                     });
                 })
                 .catch(error => {
@@ -278,245 +326,35 @@ function initPWA() {
             navigator.serviceWorker.addEventListener('message', (event) => {
                 console.log('[PWA] Received message from service worker:', event.data);
                 
-                if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
-                    console.log('[PWA] Update available, version:', event.data.version);
-                    showUpdateNotification();
+                if (event.data && event.data.type === 'SW_UPDATED') {
+                    console.log('[PWA] App auto-updated to version:', event.data.version);
+                    // Auto-update system handles everything silently
+                } else if (event.data && event.data.type === 'FORCE_RELOAD') {
+                    console.log('[PWA] Force reload requested by service worker');
+                    // Force reload the page to get fresh content
+                    window.location.reload(true);
                 }
             });
         });
     }
     
-    // Add install prompt for iOS devices
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    // Clean up any previous installation-related localStorage
+    localStorage.removeItem('iosPromptShown');
+    localStorage.removeItem('iosPromptDismissed');
+    localStorage.removeItem('desktopPromptShown');
+    localStorage.removeItem('desktopPromptDismissed');
+    localStorage.removeItem('androidPromptShown');
+    localStorage.removeItem('androidPromptDismissed');
     
-    if (isIOS && !isInStandaloneMode) {
-        // Show iOS install prompt after 2 seconds
-        setTimeout(() => {
-            const iosPrompt = document.createElement('div');
-            iosPrompt.className = 'ios-prompt';
-            iosPrompt.innerHTML = `
-                <div class="ios-prompt-content">
-                    <span class="ios-prompt-close">&times;</span>
-                    <p>To install this app on your iOS device:</p>
-                    <ol>
-                        <li>Tap <i class="fas fa-share"></i> Share</li>
-                        <li>Select "Add to Home Screen"</li>
-                    </ol>
-                </div>
-            `;
-            document.body.appendChild(iosPrompt);
-            
-            // Add close functionality
-            iosPrompt.querySelector('.ios-prompt-close').addEventListener('click', () => {
-                document.body.removeChild(iosPrompt);
-                // Save that we've shown the prompt
-                localStorage.setItem('iosPromptShown', 'true');
-            });
-        }, 2000);
-    }
-
-    // Add PWA install button functionality
-    let deferredPrompt;
-    const pwaInstallBtn = document.querySelector('.pwa-install');
-
-    // Hide install button by default
-    if (pwaInstallBtn) {
-        pwaInstallBtn.style.display = 'none';
-    }
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent the mini-infobar from appearing on mobile
-        e.preventDefault();
-        // Stash the event so it can be triggered later
-        deferredPrompt = e;
-        // Show the install button
-        if (pwaInstallBtn) {
-            pwaInstallBtn.style.display = 'flex';
-            
-            // Add animation to make it noticeable
-            setTimeout(() => {
-                pwaInstallBtn.classList.add('show');
-                // Add a subtle pulse animation
-                pwaInstallBtn.animate([
-                    { transform: 'scale(1)' },
-                    { transform: 'scale(1.1)' },
-                    { transform: 'scale(1)' }
-                ], {
-                    duration: 1000,
-                    iterations: 2
-                });
-            }, 1500);
-        }
-    });
-
-    // When the install button is clicked
-    if (pwaInstallBtn) {
-        pwaInstallBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) {
-                return;
-            }
-            // Show the install prompt
-            deferredPrompt.prompt();
-            
-            // Wait for the user to respond to the prompt
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`[PWA] User response to the install prompt: ${outcome}`);
-            
-            // Clear the deferredPrompt variable
-            deferredPrompt = null;
-            
-            // Hide the install button
-            pwaInstallBtn.classList.remove('show');
-            setTimeout(() => {
-                pwaInstallBtn.style.display = 'none';
-            }, 300);
-        });
-    }
-
-    // Listen for successful installation
-    window.addEventListener('appinstalled', () => {
-        // Hide the install button
-        if (pwaInstallBtn) {
-            pwaInstallBtn.classList.remove('show');
-            setTimeout(() => {
-                pwaInstallBtn.style.display = 'none';
-            }, 300);
-        }
-        
-        // Show a toast notification
-        showAlert('App installed successfully!', 'success');
-        
+    // All installation prompts are now permanently disabled
+    
+    // Listen for successful installation (keep for logging purposes)
+    window.addEventListener('appinstalled', (evt) => {
         console.log('[PWA] App was installed');
     });
 }
 
-// Function to show update notification with refresh button
-function showUpdateNotification() {
-    // Check if there's already an update notification
-    if (document.querySelector('.update-notification')) return;
-    
-    const notification = document.createElement('div');
-    notification.className = 'update-notification';
-    notification.innerHTML = `
-        <div class="update-notification-content">
-            <p><i class="fas fa-sync-alt"></i> New version available!</p>
-            <div class="update-actions">
-                <button class="btn btn-primary btn-update">Update Now</button>
-                <button class="btn btn-secondary btn-later">Later</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(notification);
-    
-    // Apply the update when clicked
-    notification.querySelector('.btn-update').addEventListener('click', () => {
-        // Send message to service worker to skip waiting
-        if (navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({
-                type: 'SKIP_WAITING'
-            });
-        }
-        
-        // Force reload the page
-        window.location.reload();
-    });
-    
-    // Dismiss the notification
-    notification.querySelector('.btn-later').addEventListener('click', () => {
-        document.body.removeChild(notification);
-    });
-    
-    // Add styles for the notification if not already in CSS
-    if (!document.getElementById('update-notification-styles')) {
-        const style = document.createElement('style');
-        style.id = 'update-notification-styles';
-        style.textContent = `
-            .update-notification {
-                position: fixed;
-                bottom: 20px;
-                left: 20px;
-                z-index: 1000;
-                background-color: #fff;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                max-width: 300px;
-                animation: slideIn 0.3s ease;
-            }
-            
-            .update-notification-content {
-                padding: 16px;
-            }
-            
-            .update-notification p {
-                margin: 0 0 12px 0;
-                font-weight: 500;
-                display: flex;
-                align-items: center;
-            }
-            
-            .update-notification i {
-                margin-right: 8px;
-                color: #4a90e2;
-            }
-            
-            .update-actions {
-                display: flex;
-                gap: 8px;
-            }
-            
-            .btn-update, .btn-later {
-                padding: 6px 12px;
-                font-size: 14px;
-            }
-            
-            @keyframes slideIn {
-                from { transform: translate(-50px, 20px); opacity: 0; }
-                to { transform: translate(0, 0); opacity: 1; }
-            }
-            
-            .ios-prompt {
-                position: fixed;
-                bottom: 20px;
-                left: 20px;
-                right: 20px;
-                background: white;
-                padding: 15px;
-                border-radius: 10px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                z-index: 1000;
-                animation: slideIn 0.3s ease;
-            }
-            
-            .ios-prompt-content {
-                position: relative;
-            }
-            
-            .ios-prompt-close {
-                position: absolute;
-                top: -10px;
-                right: -5px;
-                font-size: 24px;
-                cursor: pointer;
-            }
-            
-            .ios-prompt p {
-                margin: 0 0 10px 0;
-                font-weight: 500;
-            }
-            
-            .ios-prompt ol {
-                margin: 0;
-                padding-left: 20px;
-            }
-            
-            .ios-prompt li {
-                margin-bottom: 5px;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
+// Function removed - auto-update system handles updates automatically
 
 // Dashboard charts initialization using Chart.js
 function initDashboardCharts() {
@@ -630,6 +468,18 @@ function validateForm(formId) {
 
 // Show alert message with toast notifications
 function showAlert(message, type = 'info', isPersistent = false) {
+    // Skip showing any update, install, or version-related alerts
+    if (message.includes('update') || message.includes('Update') || 
+        message.includes('version') || message.includes('Version') ||
+        message.includes('install') || message.includes('Install') ||
+        message.includes('Add to Home') || message.includes('Chrome:') ||
+        message.includes('Edge:') || message.includes('Firefox:') ||
+        message.includes('available') || message.includes('Available') ||
+        message.includes('New ') || message.includes('NEW ')) {
+        console.log('[PWA] Blocking notification:', message);
+        return;
+    }
+    
     // Check if toast container exists, if not create it
     let toastContainer = document.querySelector('.toast-container');
     if (!toastContainer) {
@@ -647,43 +497,18 @@ function showAlert(message, type = 'info', isPersistent = false) {
                      type === 'error' ? 'fa-times-circle' :
                      type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
     
-    // Create toast content with action button for updates
-    if (isPersistent && message.includes('update')) {
-        toast.innerHTML = `
-            <div class="toast-icon">
-                <i class="fas ${iconClass}"></i>
-            </div>
-            <div class="toast-content">
-                ${message}
-            </div>
-            <div class="toast-action">
-                <button class="btn-refresh">Refresh</button>
-            </div>
-            <div class="toast-close">
-                <i class="fas fa-times"></i>
-            </div>
-        `;
-        
-        // Add refresh button functionality
-        const refreshBtn = toast.querySelector('.btn-refresh');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', function() {
-                window.location.reload();
-            });
-        }
-    } else {
-        toast.innerHTML = `
-            <div class="toast-icon">
-                <i class="fas ${iconClass}"></i>
-            </div>
-            <div class="toast-content">
-                ${message}
-            </div>
-            <div class="toast-close">
-                <i class="fas fa-times"></i>
-            </div>
-        `;
-    }
+    // Create simple toast content without update buttons
+    toast.innerHTML = `
+        <div class="toast-icon">
+            <i class="fas ${iconClass}"></i>
+        </div>
+        <div class="toast-content">
+            ${message}
+        </div>
+        <div class="toast-close">
+            <i class="fas fa-times"></i>
+        </div>
+    `;
     
     // Add to container
     toastContainer.appendChild(toast);

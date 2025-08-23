@@ -142,6 +142,142 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title>Patient Records - HealthConnect</title>
     <?php include '../../includes/header_links.php'; ?>
     <style>
+        /* Desktop Table Layout */
+        @media (min-width: 992px) {
+            .patients-grid {
+                display: none;
+            }
+            
+            .patients-table-container {
+                display: block;
+            }
+            
+            .patients-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+                background: white;
+                border-radius: 10px;
+                overflow: hidden;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            
+            .patients-table th,
+            .patients-table td {
+                padding: 15px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }
+            
+            .patients-table th {
+                background-color: #f8f9fa;
+                font-weight: 600;
+                color: #333;
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
+            .patients-table tbody tr {
+                transition: all 0.2s ease;
+            }
+            
+            .patients-table tbody tr:hover {
+                background-color: #f8f9fa;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            
+            .table-patient-name {
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 4px;
+            }
+            
+            .table-demographics {
+                font-size: 0.85rem;
+                color: #666;
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            
+            .table-contact-info {
+                font-size: 0.9rem;
+                color: #666;
+            }
+            
+            .table-contact-info div {
+                margin-bottom: 3px;
+            }
+            
+            .table-physical-data {
+                font-size: 0.9rem;
+                color: #666;
+            }
+            
+            .table-last-visit {
+                font-size: 0.9rem;
+                color: #666;
+            }
+            
+            .table-last-diagnosis {
+                font-size: 0.85rem;
+                color: #555;
+                margin-top: 5px;
+                font-style: italic;
+            }
+            
+            .table-approval-status {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.8rem;
+                font-weight: 500;
+            }
+            
+            .table-approval-status.status-approved {
+                background-color: #e8f5e9;
+                color: #2e7d32;
+            }
+            
+            .table-approval-status.status-pending {
+                background-color: #fff3cd;
+                color: #856404;
+            }
+            
+            .table-actions {
+                display: flex;
+                gap: 5px;
+                flex-wrap: wrap;
+            }
+            
+            .table-actions .btn-action {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+                display: flex;
+                align-items: center;
+                gap: 0.3rem;
+                white-space: nowrap;
+            }
+        }
+
+        /* Mobile Card Layout */
+        @media (max-width: 991px) {
+            .patients-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+            
+            .patients-table-container {
+                display: none;
+            }
+        }
+
         .page-header {
             display: flex;
             justify-content: space-between;
@@ -729,7 +865,8 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         <?php endif; ?>
         
-        <div class="patients-grid">
+        <!-- Desktop Table Layout -->
+        <div class="patients-table-container">
             <?php if (empty($patients)): ?>
                 <div class="no-results">
                     <i class="fas fa-user-injured"></i>
@@ -737,21 +874,28 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <p>Add new patients using the button above.</p>
                 </div>
             <?php else: ?>
-                <?php foreach ($patients as $patient): ?>
-                    <div class="patient-card">
-                        <div class="header">
-                            <h3 class="name">
+            <table class="patients-table">
+                <thead>
+                    <tr>
+                        <th>Patient Name</th>
+                        <th>Contact Information</th>
+                        <th>Physical Data</th>
+                        <th>Last Visit</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($patients as $patient): ?>
+                    <tr>
+                        <td>
+                            <div class="table-patient-name">
                                 <?php echo htmlspecialchars($patient['last_name'] . ', ' . $patient['first_name']); ?>
                                 <?php if ($patient['middle_name']): ?>
                                     <?php echo ' ' . htmlspecialchars($patient['middle_name'][0]) . '.'; ?>
                                 <?php endif; ?>
-                            </h3>
-                            <div class="approval-status <?php echo $patient['is_approved'] ? 'status-approved' : 'status-pending'; ?>">
-                                <i class="fas <?php echo $patient['is_approved'] ? 'fa-check-circle' : 'fa-clock'; ?>"></i>
-                                <?php echo $patient['is_approved'] ? 'Approved' : 'Pending Approval'; ?>
                             </div>
-                           
-                            <div class="demographics">
+                            <div class="table-demographics">
                                 <span>
                                     <i class="fas fa-birthday-cake"></i>
                                     <?php 
@@ -770,51 +914,28 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     </span>
                                 <?php endif; ?>
                             </div>
-                            <div class="info-item" style="margin-bottom: -8px;">
-                                <i class="fas fa-phone"></i>
-                                <span><?php echo htmlspecialchars($patient['mobile_number']); ?></span>
+                        </td>
+                        <td>
+                            <div class="table-contact-info">
+                                <div><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($patient['email']); ?></div>
+                                <div><i class="fas fa-phone"></i> <?php echo htmlspecialchars($patient['mobile_number']); ?></div>
                             </div>
-                        </div>
-
-                        <div class="info-section">
-                            <div class="info-section-title">
-                                <i class="fas fa-id-card"></i> Contact Information
-                            </div>
-                            <div class="info-grid">
-                                <div class="info-item">
-                                    <i class="fas fa-envelope"></i>
-                                    <span><?php echo htmlspecialchars($patient['email']); ?></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <?php if ($patient['height'] || $patient['weight']): ?>
-                        <div class="info-section">
-                            <div class="info-section-title">
-                                <i class="fas fa-weight"></i> Physical Data
-                            </div>
-                            <div class="info-grid">
+                        </td>
+                        <td>
+                            <div class="table-physical-data">
                                 <?php if ($patient['height']): ?>
-                                    <div class="info-item">
-                                        <i class="fas fa-ruler-vertical"></i>
-                                        <span><?php echo htmlspecialchars($patient['height']); ?> cm</span>
-                                    </div>
+                                    <div><i class="fas fa-ruler-vertical"></i> <?php echo htmlspecialchars($patient['height']); ?> cm</div>
                                 <?php endif; ?>
                                 <?php if ($patient['weight']): ?>
-                                    <div class="info-item">
-                                        <i class="fas fa-weight"></i>
-                                        <span><?php echo htmlspecialchars($patient['weight']); ?> kg</span>
-                                    </div>
+                                    <div><i class="fas fa-weight"></i> <?php echo htmlspecialchars($patient['weight']); ?> kg</div>
+                                <?php endif; ?>
+                                <?php if (!$patient['height'] && !$patient['weight']): ?>
+                                    <span class="text-muted">No data</span>
                                 <?php endif; ?>
                             </div>
-                        </div>
-                        <?php endif; ?>
-
-                        <div class="visit-info">
-                            <div class="title">
-                                <i class="fas fa-calendar-check"></i> Last Visit
-                            </div>
-                            <div class="detail">
+                        </td>
+                        <td>
+                            <div class="table-last-visit">
                                 <?php 
                                     if ($patient['last_visit'] !== 'No visits') {
                                         echo date('M d, Y', strtotime($patient['last_visit']));
@@ -824,25 +945,31 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 ?>
                             </div>
                             <?php if ($patient['last_diagnosis'] !== 'No diagnosis'): ?>
-                                <div class="title" style="margin-top: 8px;">
-                                    <i class="fas fa-stethoscope"></i> Last Diagnosis
-                                </div>
-                                <div class="detail">
+                                <div class="table-last-diagnosis">
                                     <?php echo htmlspecialchars($patient['last_diagnosis']); ?>
                                 </div>
                             <?php endif; ?>
-                        </div>
-
-                        <div class="actions">
-                            <a href="view_medical_history.php?patient_id=<?php echo $patient['patient_id']; ?>" class="btn-action btn-view">
-                                <i class="fas fa-history"></i> History
-                            </a>
-                            <button class="btn-action btn-edit" onclick="showAddRecordModal(<?php echo $patient['patient_id']; ?>)">
-                                <i class="fas fa-plus"></i> Add Record
-                            </button>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
+                        </td>
+                        <td>
+                            <span class="table-approval-status <?php echo $patient['is_approved'] ? 'status-approved' : 'status-pending'; ?>">
+                                <i class="fas <?php echo $patient['is_approved'] ? 'fa-check-circle' : 'fa-clock'; ?>"></i>
+                                <?php echo $patient['is_approved'] ? 'Approved' : 'Pending'; ?>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="table-actions">
+                                <a href="view_medical_history.php?patient_id=<?php echo $patient['patient_id']; ?>" class="btn-action btn-view">
+                                    <i class="fas fa-history"></i> History
+                                </a>
+                                <button class="btn-action btn-edit" onclick="showAddRecordModal(<?php echo $patient['patient_id']; ?>)">
+                                    <i class="fas fa-plus"></i> Add Record
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
             <?php endif; ?>
         </div>
     </div>
@@ -985,10 +1112,17 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
 
                         <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" name="password" class="form-control" required placeholder="Password">
+                        </div>
+
+                        <div class="form-group">
                             <label for="mobile_number">Mobile Number</label>
                             <input type="tel" id="mobile_number" name="mobile_number" class="form-control" required placeholder="Phone number">
                         </div>
-                        
+                    </div>
+                    
+                    <div class="form-grid">
                         <div class="form-group address-group">
                             <label for="address">Address</label>
                             <textarea id="address" name="address" class="form-control" rows="2" required placeholder="Full address"></textarea>

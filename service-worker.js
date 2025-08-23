@@ -1,25 +1,25 @@
 // Service Worker for HealthConnect PWA
-const CACHE_VERSION = '1.0.3';
+const CACHE_VERSION = '1.0.5'; // Updated to clear installation prompts
 const CACHE_NAME = `healthconnect-v${CACHE_VERSION}`;
 const urlsToCache = [
-  './index.php',
-  './manifest.json',
-  './offline.html',
-  './assets/css/style.css',
-  './assets/js/app.js',
-  './assets/images/icon-192x192.png',
-  './assets/images/icon-512x512.png',
-  './assets/images/favicon-16x16.png',
-  './assets/images/favicon-32x32.png',
-  './assets/images/favicon.ico',
-  './assets/images/apple-touch-icon.png',
-  './assets/images/health-center.jpg'
+  'https://aphid-major-dolphin.ngrok-free.app/connect/index.php',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/manifest.json',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/offline.html',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/assets/css/style.css',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/assets/js/app.js',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/icon-192x192.png',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/icon-512x512.png',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/favicon-16x16.png',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/favicon-32x32.png',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/favicon.ico',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/apple-touch-icon.png',
+  'https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/health-center.jpg'
 ];
 
-// Check for service worker updates more frequently
-const CHECK_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
+// Auto-update check interval - more frequent for faster updates
+const CHECK_INTERVAL = 60 * 1000; // 1 minute in milliseconds
 
-// Install event - cache essential assets
+// Install event - cache essential assets and skip waiting for automatic activation
 self.addEventListener('install', event => {
   console.log('[ServiceWorker] Installing version:', CACHE_VERSION);
   event.waitUntil(
@@ -29,46 +29,46 @@ self.addEventListener('install', event => {
         return cache.addAll(urlsToCache);
       })
       .then(() => {
-        console.log('[ServiceWorker] Install completed');
-        // Activate new service worker immediately
+        console.log('[ServiceWorker] Install completed - Auto activating');
+        // Automatically skip waiting for immediate activation
         return self.skipWaiting();
+      })
+      .catch(error => {
+        console.error('[ServiceWorker] Install failed:', error);
       })
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and take control immediately
 self.addEventListener('activate', event => {
   console.log('[ServiceWorker] Activating version:', CACHE_VERSION);
   event.waitUntil(
     Promise.all([
-      // Take control of all clients immediately
+      // Take control of all clients immediately for auto-update
       self.clients.claim(),
       // Remove old caches
       caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames.map(cacheName => {
-            if (cacheName !== STATIC_CACHE && 
-                cacheName !== DYNAMIC_CACHE && 
-                cacheName !== API_CACHE && 
-                cacheName !== OFFLINE_FALLBACKS && 
-                cacheName.startsWith('healthconnect-')) {
+            if (cacheName !== CACHE_NAME && cacheName.startsWith('healthconnect-')) {
               console.log('[ServiceWorker] Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
           })
         );
-      })
-    ]).then(() => {
-      console.log('[ServiceWorker] Activate completed');
-      // Notify all clients about the update
+      }),
+      // Notify all clients about the automatic update (silently)
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
           client.postMessage({
-            type: 'UPDATE_AVAILABLE',
-            version: CACHE_VERSION
+            type: 'SW_UPDATED',
+            version: CACHE_VERSION,
+            message: 'App updated automatically to the latest version'
           });
         });
-      });
+      })
+    ]).then(() => {
+      console.log('[ServiceWorker] Activate completed - Auto update successful');
     })
   );
 });
@@ -93,7 +93,7 @@ self.addEventListener('fetch', event => {
             })
             .catch(() => {
               // Fallback to cache if network fails
-              return response || caches.match('./offline.html');
+              return response || caches.match('https://aphid-major-dolphin.ngrok-free.app/connect/offline.html');
             });
         }
 
@@ -125,7 +125,7 @@ self.addEventListener('fetch', event => {
           .catch(() => {
             // If both cache and network fail, show offline page for navigation requests
             if (event.request.mode === 'navigate') {
-              return caches.match('./offline.html');
+              return caches.match('https://aphid-major-dolphin.ngrok-free.app/connect/offline.html');
             }
             
             // For image requests, return a placeholder
@@ -148,46 +148,47 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Enhanced auto-update mechanism
+// Enhanced auto-update mechanism with automatic activation
 self.addEventListener('message', event => {
   if (event.data) {
-    // Handle manual update check
+    // Automatically handle skip waiting for seamless updates
+    if (event.data.type === 'SKIP_WAITING') {
+      console.log('[ServiceWorker] Auto skip waiting for seamless update');
+      self.skipWaiting();
+    }
+    
+    // Handle manual update check (kept for debugging)
     if (event.data.type === 'CHECK_UPDATE') {
-      console.log('[ServiceWorker] Manually checking for updates...');
+      console.log('[ServiceWorker] Manual update check requested');
       self.registration.update()
         .then(() => {
-          console.log('[ServiceWorker] Update check completed');
-          // Notify the client that the check was performed
+          console.log('[ServiceWorker] Manual update check completed');
           event.source.postMessage({
             type: 'UPDATE_CHECK_COMPLETED'
           });
         })
         .catch(error => {
-          console.error('[ServiceWorker] Update check failed:', error);
+          console.error('[ServiceWorker] Manual update check failed:', error);
         });
-    }
-    
-    // Handle reload request
-    if (event.data.type === 'SKIP_WAITING') {
-      console.log('[ServiceWorker] Skip waiting requested');
-      self.skipWaiting();
     }
   }
 });
 
-// Function to perform the update check
-const checkForUpdates = async () => {
+// Automatic update function with error handling
+const performAutoUpdate = async () => {
   try {
-    console.log('[ServiceWorker] Checking for updates...');
+    console.log('[ServiceWorker] Performing automatic update check...');
     await self.registration.update();
-    console.log('[ServiceWorker] Update check completed');
+    console.log('[ServiceWorker] Auto update check completed successfully');
   } catch (error) {
-    console.error('[ServiceWorker] Update check failed:', error);
+    console.error('[ServiceWorker] Auto update check failed:', error);
+    // Retry after 5 minutes on failure
+    setTimeout(performAutoUpdate, 5 * 60 * 1000);
   }
 };
 
-// Initial update check
-setTimeout(checkForUpdates, 5000);
+// Start automatic updates immediately after service worker is ready
+setTimeout(performAutoUpdate, 3000); // Initial check after 3 seconds
 
-// Set up periodic update checks
-setInterval(checkForUpdates, CHECK_INTERVAL); 
+// Set up continuous automatic update checks
+setInterval(performAutoUpdate, CHECK_INTERVAL); 

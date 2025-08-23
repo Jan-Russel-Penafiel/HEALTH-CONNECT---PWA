@@ -2,37 +2,37 @@
   "name": "HealthConnect",
   "short_name": "HealthConnect",
   "description": "Smart Mobile Application For Brgy. Health Center of Brgy. Poblacion President Quirino Sultan Kudarat",
-  "start_url": " https://aphid-major-dolphin.ngrok-free.app/connect/index.php",
+  "start_url": "https://aphid-major-dolphin.ngrok-free.app/connect/index.php",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4CAF50",
   "orientation": "portrait",
-  "scope": "/connect/",
+  "scope": "https://aphid-major-dolphin.ngrok-free.app/connect/",
   "icons": [
     {
-      "src": "assets/images/favicon-16x16.png",
+      "src": "https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/favicon-16x16.png",
       "sizes": "16x16",
       "type": "image/png"
     },
     {
-      "src": "assets/images/favicon-32x32.png",
+      "src": "https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/favicon-32x32.png",
       "sizes": "32x32",
       "type": "image/png"
     },
     {
-      "src": "assets/images/apple-touch-icon.png",
+      "src": "https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/images/icon-192x192.png",
+      "src": "https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "assets/images/icon-512x512.png",
+      "src": "https://aphid-major-dolphin.ngrok-free.app/connect/assets/images/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

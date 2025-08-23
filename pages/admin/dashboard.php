@@ -14,43 +14,64 @@ $conn = $database->getConnection();
 
 // Initialize variables
 $stats = [
-    'total_patients' => 0,
-    'total_health_workers' => 0,
-    'total_appointments' => 0,
-    'pending_appointments' => 0
+    'appointments_today' => 0,
+    'appointments_this_week' => 0,
+    'appointments_this_month' => 0,
+    'patients_today' => 0,
+    'patients_this_week' => 0,
+    'patients_this_month' => 0
 ];
 $recent_activities = [];
 $error_message = '';
 
 // Data for charts
 $monthly_appointments = [];
-$appointment_status_counts = [];
+$weekly_appointments = [];
 $daily_appointments = [];
+$monthly_patients = [];
+$weekly_patients = [];
+$daily_patients = [];
 
 try {
-    // Get total patients
+    // Get appointments today
+    $query = "SELECT COUNT(*) as count FROM appointments WHERE DATE(appointment_date) = CURDATE()";
+    $stmt = $conn->query($query);
+    $stats['appointments_today'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+    // Get appointments this week (Monday to Sunday)
+    $query = "SELECT COUNT(*) as count FROM appointments 
+              WHERE YEARWEEK(appointment_date, 1) = YEARWEEK(CURDATE(), 1)";
+    $stmt = $conn->query($query);
+    $stats['appointments_this_week'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+    // Get appointments this month
+    $query = "SELECT COUNT(*) as count FROM appointments 
+              WHERE YEAR(appointment_date) = YEAR(CURDATE()) 
+              AND MONTH(appointment_date) = MONTH(CURDATE())";
+    $stmt = $conn->query($query);
+    $stats['appointments_this_month'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+    // Get patients registered today
     $query = "SELECT COUNT(*) as count FROM users u 
               WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'patient') 
-              AND u.is_active = 1";
+              AND DATE(u.created_at) = CURDATE()";
     $stmt = $conn->query($query);
-    $stats['total_patients'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    $stats['patients_today'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
-    // Get total health workers
+    // Get patients registered this week
     $query = "SELECT COUNT(*) as count FROM users u 
-              WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'health_worker') 
-              AND u.is_active = 1";
+              WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'patient') 
+              AND YEARWEEK(u.created_at, 1) = YEARWEEK(CURDATE(), 1)";
     $stmt = $conn->query($query);
-    $stats['total_health_workers'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    $stats['patients_this_week'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
-    // Get total appointments
-    $query = "SELECT COUNT(*) as count FROM appointments";
+    // Get patients registered this month
+    $query = "SELECT COUNT(*) as count FROM users u 
+              WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'patient') 
+              AND YEAR(u.created_at) = YEAR(CURDATE()) 
+              AND MONTH(u.created_at) = MONTH(CURDATE())";
     $stmt = $conn->query($query);
-    $stats['total_appointments'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-
-    // Get pending appointments (status_id = 1 for 'Scheduled')
-    $query = "SELECT COUNT(*) as count FROM appointments WHERE status_id = 1";
-    $stmt = $conn->query($query);
-    $stats['pending_appointments'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    $stats['patients_this_month'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
     // Get recent activities (appointments)
     $query = "SELECT 
@@ -71,52 +92,14 @@ try {
     $stmt->execute();
     $recent_activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get monthly appointments for the current year
-    $current_year = date('Y');
-    $query = "SELECT 
-                MONTH(appointment_date) as month, 
-                COUNT(*) as count 
-              FROM appointments 
-              WHERE YEAR(appointment_date) = ?
-              GROUP BY MONTH(appointment_date)
-              ORDER BY month";
-    $stmt = $conn->prepare($query);
-    $stmt->execute([$current_year]);
-    $monthly_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Initialize all months with zero counts
-    for ($i = 1; $i <= 12; $i++) {
-        $monthly_appointments[$i] = 0;
-    }
-    
-    // Fill in actual data
-    foreach ($monthly_data as $data) {
-        $monthly_appointments[$data['month']] = (int)$data['count'];
-    }
-    
-    // Get appointment status distribution
-    $query = "SELECT 
-                s.status_name, 
-                COUNT(*) as count 
-              FROM appointments a
-              JOIN appointment_status s ON a.status_id = s.status_id
-              GROUP BY a.status_id";
-    $stmt = $conn->prepare($query);
-    $stmt->execute();
-    $status_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    foreach ($status_data as $data) {
-        $appointment_status_counts[$data['status_name']] = (int)$data['count'];
-    }
-    
     // Get daily appointments for the last 7 days
     $query = "SELECT 
-                appointment_date, 
+                DATE(appointment_date) as date, 
                 COUNT(*) as count 
               FROM appointments 
               WHERE appointment_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()
-              GROUP BY appointment_date
-              ORDER BY appointment_date";
+              GROUP BY DATE(appointment_date)
+              ORDER BY date";
     $stmt = $conn->prepare($query);
     $stmt->execute();
     $daily_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -129,7 +112,125 @@ try {
     
     // Fill in actual data
     foreach ($daily_data as $data) {
-        $daily_appointments[$data['appointment_date']] = (int)$data['count'];
+        $daily_appointments[$data['date']] = (int)$data['count'];
+    }
+
+    // Get weekly appointments for the last 8 weeks
+    $query = "SELECT 
+                YEARWEEK(appointment_date, 1) as week, 
+                COUNT(*) as count 
+              FROM appointments 
+              WHERE appointment_date >= DATE_SUB(CURDATE(), INTERVAL 8 WEEK)
+              GROUP BY YEARWEEK(appointment_date, 1)
+              ORDER BY week";
+    $stmt = $conn->prepare($query);
+    $stmt->execute();
+    $weekly_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Initialize last 8 weeks with zero counts
+    for ($i = 7; $i >= 0; $i--) {
+        $week = date('oW', strtotime("-$i weeks"));
+        $weekly_appointments[$week] = 0;
+    }
+    
+    // Fill in actual data
+    foreach ($weekly_data as $data) {
+        $weekly_appointments[$data['week']] = (int)$data['count'];
+    }
+
+    // Get monthly appointments for the last 12 months
+    $query = "SELECT 
+                DATE_FORMAT(appointment_date, '%Y-%m') as month, 
+                COUNT(*) as count 
+              FROM appointments 
+              WHERE appointment_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+              GROUP BY DATE_FORMAT(appointment_date, '%Y-%m')
+              ORDER BY month";
+    $stmt = $conn->prepare($query);
+    $stmt->execute();
+    $monthly_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Initialize last 12 months with zero counts
+    for ($i = 11; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i months"));
+        $monthly_appointments[$month] = 0;
+    }
+    
+    // Fill in actual data
+    foreach ($monthly_data as $data) {
+        $monthly_appointments[$data['month']] = (int)$data['count'];
+    }
+
+    // Get daily patient registrations for the last 7 days
+    $query = "SELECT 
+                DATE(created_at) as date, 
+                COUNT(*) as count 
+              FROM users u
+              WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'patient')
+              AND created_at BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()
+              GROUP BY DATE(created_at)
+              ORDER BY date";
+    $stmt = $conn->prepare($query);
+    $stmt->execute();
+    $daily_patient_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Initialize last 7 days with zero counts
+    for ($i = 6; $i >= 0; $i--) {
+        $date = date('Y-m-d', strtotime("-$i days"));
+        $daily_patients[$date] = 0;
+    }
+    
+    // Fill in actual data
+    foreach ($daily_patient_data as $data) {
+        $daily_patients[$data['date']] = (int)$data['count'];
+    }
+
+    // Get weekly patient registrations for the last 8 weeks
+    $query = "SELECT 
+                YEARWEEK(created_at, 1) as week, 
+                COUNT(*) as count 
+              FROM users u
+              WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'patient')
+              AND created_at >= DATE_SUB(CURDATE(), INTERVAL 8 WEEK)
+              GROUP BY YEARWEEK(created_at, 1)
+              ORDER BY week";
+    $stmt = $conn->prepare($query);
+    $stmt->execute();
+    $weekly_patient_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Initialize last 8 weeks with zero counts
+    for ($i = 7; $i >= 0; $i--) {
+        $week = date('oW', strtotime("-$i weeks"));
+        $weekly_patients[$week] = 0;
+    }
+    
+    // Fill in actual data
+    foreach ($weekly_patient_data as $data) {
+        $weekly_patients[$data['week']] = (int)$data['count'];
+    }
+
+    // Get monthly patient registrations for the last 12 months
+    $query = "SELECT 
+                DATE_FORMAT(created_at, '%Y-%m') as month, 
+                COUNT(*) as count 
+              FROM users u
+              WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'patient')
+              AND created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+              GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+              ORDER BY month";
+    $stmt = $conn->prepare($query);
+    $stmt->execute();
+    $monthly_patient_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Initialize last 12 months with zero counts
+    for ($i = 11; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i months"));
+        $monthly_patients[$month] = 0;
+    }
+    
+    // Fill in actual data
+    foreach ($monthly_patient_data as $data) {
+        $monthly_patients[$data['month']] = (int)$data['count'];
     }
 
 } catch (PDOException $e) {
@@ -175,6 +276,35 @@ try {
             color: #333;
             font-weight: 500;
         }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-card i {
+            font-size: 2rem;
+            color: #007bff;
+            margin-bottom: 0.5rem;
+        }
+        .stat-card h3 {
+            margin: 0.5rem 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .stat-card p {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -196,46 +326,77 @@ try {
         
         <div class="stats-grid">
             <div class="stat-card">
+                <i class="fas fa-calendar-day"></i>
+                <h3>Appointments Today</h3>
+                <p><?php echo number_format($stats['appointments_today']); ?></p>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-calendar-week"></i>
+                <h3>Appointments This Week</h3>
+                <p><?php echo number_format($stats['appointments_this_week']); ?></p>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-calendar-alt"></i>
+                <h3>Appointments This Month</h3>
+                <p><?php echo number_format($stats['appointments_this_month']); ?></p>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-user-plus"></i>
+                <h3>Patients Today</h3>
+                <p><?php echo number_format($stats['patients_today']); ?></p>
+            </div>
+
+            <div class="stat-card">
                 <i class="fas fa-users"></i>
-                <h3>Total Patients</h3>
-                <p><?php echo number_format($stats['total_patients']); ?></p>
+                <h3>Patients This Week</h3>
+                <p><?php echo number_format($stats['patients_this_week']); ?></p>
             </div>
             
             <div class="stat-card">
-                <i class="fas fa-user-md"></i>
-                <h3>Health Workers</h3>
-                <p><?php echo number_format($stats['total_health_workers']); ?></p>
-            </div>
-            
-            <div class="stat-card">
-                <i class="fas fa-calendar-check"></i>
-                <h3>Total Appointments</h3>
-                <p><?php echo number_format($stats['total_appointments']); ?></p>
-            </div>
-            
-            <div class="stat-card">
-                <i class="fas fa-clock"></i>
-                <h3>Pending Appointments</h3>
-                <p><?php echo number_format($stats['pending_appointments']); ?></p>
+                <i class="fas fa-user-friends"></i>
+                <h3>Patients This Month</h3>
+                <p><?php echo number_format($stats['patients_this_month']); ?></p>
             </div>
         </div>
 
         <!-- Charts Section -->
         <div class="charts-grid">
             <div class="chart-container">
-                <h3 class="chart-title">Monthly Appointments (<?php echo date('Y'); ?>)</h3>
+                <h3 class="chart-title">Daily Appointments (Last 7 Days)</h3>
+                <canvas id="dailyAppointmentsChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3 class="chart-title">Daily Patient Registrations (Last 7 Days)</h3>
+                <canvas id="dailyPatientsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3 class="chart-title">Weekly Appointments (Last 8 Weeks)</h3>
+                <canvas id="weeklyAppointmentsChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3 class="chart-title">Weekly Patient Registrations (Last 8 Weeks)</h3>
+                <canvas id="weeklyPatientsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3 class="chart-title">Monthly Appointments (Last 12 Months)</h3>
                 <canvas id="monthlyAppointmentsChart"></canvas>
             </div>
             
             <div class="chart-container">
-                <h3 class="chart-title">Appointment Status Distribution</h3>
-                <canvas id="appointmentStatusChart"></canvas>
+                <h3 class="chart-title">Monthly Patient Registrations (Last 12 Months)</h3>
+                <canvas id="monthlyPatientsChart"></canvas>
             </div>
-        </div>
-        
-        <div class="chart-container">
-            <h3 class="chart-title">Daily Appointments (Last 7 Days)</h3>
-            <canvas id="dailyAppointmentsChart"></canvas>
         </div>
 
         <div class="recent-activity">
@@ -278,88 +439,9 @@ try {
     <script>
         // Chart.js initialization
         document.addEventListener('DOMContentLoaded', function() {
-            // Monthly Appointments Chart
-            const monthlyCtx = document.getElementById('monthlyAppointmentsChart').getContext('2d');
-            const monthlyChart = new Chart(monthlyCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                    datasets: [{
-                        label: 'Number of Appointments',
-                        data: [
-                            <?php echo implode(',', $monthly_appointments); ?>
-                        ],
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Appointment Status Chart
-            const statusCtx = document.getElementById('appointmentStatusChart').getContext('2d');
-            const statusChart = new Chart(statusCtx, {
-                type: 'bar',
-                data: {
-                    labels: [
-                        <?php 
-                            $labels = array_map(function($key) { 
-                                return "'$key'"; 
-                            }, array_keys($appointment_status_counts));
-                            echo implode(',', $labels);
-                        ?>
-                    ],
-                    datasets: [{
-                        label: 'Number of Appointments',
-                        data: [
-                            <?php echo implode(',', array_values($appointment_status_counts)); ?>
-                        ],
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.6)',
-                            'rgba(54, 162, 235, 0.6)',
-                            'rgba(75, 192, 192, 0.6)',
-                            'rgba(255, 206, 86, 0.6)',
-                            'rgba(153, 102, 255, 0.6)'
-                        ],
-                        borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(153, 102, 255, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0
-                            }
-                        }
-                    }
-                }
-            });
-
             // Daily Appointments Chart
-            const dailyCtx = document.getElementById('dailyAppointmentsChart').getContext('2d');
-            const dailyChart = new Chart(dailyCtx, {
+            const dailyAppointmentsCtx = document.getElementById('dailyAppointmentsChart').getContext('2d');
+            const dailyAppointmentsChart = new Chart(dailyAppointmentsCtx, {
                 type: 'line',
                 data: {
                     labels: [
@@ -372,9 +454,45 @@ try {
                     ],
                     datasets: [{
                         label: 'Daily Appointments',
-                        data: [
-                            <?php echo implode(',', array_values($daily_appointments)); ?>
-                        ],
+                        data: [<?php echo implode(',', array_values($daily_appointments)); ?>],
+                        fill: false,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        tension: 0.1,
+                        pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                        pointBorderColor: '#fff',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+
+            // Daily Patients Chart
+            const dailyPatientsCtx = document.getElementById('dailyPatientsChart').getContext('2d');
+            const dailyPatientsChart = new Chart(dailyPatientsCtx, {
+                type: 'line',
+                data: {
+                    labels: [
+                        <?php 
+                            $dates = array_map(function($date) { 
+                                return "'" . date('M d', strtotime($date)) . "'"; 
+                            }, array_keys($daily_patients));
+                            echo implode(',', $dates);
+                        ?>
+                    ],
+                    datasets: [{
+                        label: 'Daily Patient Registrations',
+                        data: [<?php echo implode(',', array_values($daily_patients)); ?>],
                         fill: false,
                         backgroundColor: 'rgba(75, 192, 192, 0.6)',
                         borderColor: 'rgba(75, 192, 192, 1)',
@@ -391,9 +509,143 @@ try {
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: {
-                                precision: 0
-                            }
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+
+            // Weekly Appointments Chart
+            const weeklyAppointmentsCtx = document.getElementById('weeklyAppointmentsChart').getContext('2d');
+            const weeklyAppointmentsChart = new Chart(weeklyAppointmentsCtx, {
+                type: 'bar',
+                data: {
+                    labels: [
+                        <?php 
+                            $weeks = array_map(function($week) { 
+                                $year = substr($week, 0, 4);
+                                $weekNum = substr($week, 4, 2);
+                                return "'Week $weekNum ($year)'"; 
+                            }, array_keys($weekly_appointments));
+                            echo implode(',', $weeks);
+                        ?>
+                    ],
+                    datasets: [{
+                        label: 'Weekly Appointments',
+                        data: [<?php echo implode(',', array_values($weekly_appointments)); ?>],
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+
+            // Weekly Patients Chart
+            const weeklyPatientsCtx = document.getElementById('weeklyPatientsChart').getContext('2d');
+            const weeklyPatientsChart = new Chart(weeklyPatientsCtx, {
+                type: 'bar',
+                data: {
+                    labels: [
+                        <?php 
+                            $weeks = array_map(function($week) { 
+                                $year = substr($week, 0, 4);
+                                $weekNum = substr($week, 4, 2);
+                                return "'Week $weekNum ($year)'"; 
+                            }, array_keys($weekly_patients));
+                            echo implode(',', $weeks);
+                        ?>
+                    ],
+                    datasets: [{
+                        label: 'Weekly Patient Registrations',
+                        data: [<?php echo implode(',', array_values($weekly_patients)); ?>],
+                        backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+
+            // Monthly Appointments Chart
+            const monthlyAppointmentsCtx = document.getElementById('monthlyAppointmentsChart').getContext('2d');
+            const monthlyAppointmentsChart = new Chart(monthlyAppointmentsCtx, {
+                type: 'bar',
+                data: {
+                    labels: [
+                        <?php 
+                            $months = array_map(function($month) { 
+                                return "'" . date('M Y', strtotime($month . '-01')) . "'"; 
+                            }, array_keys($monthly_appointments));
+                            echo implode(',', $months);
+                        ?>
+                    ],
+                    datasets: [{
+                        label: 'Monthly Appointments',
+                        data: [<?php echo implode(',', array_values($monthly_appointments)); ?>],
+                        backgroundColor: 'rgba(255, 206, 86, 0.6)',
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+
+            // Monthly Patients Chart
+            const monthlyPatientsCtx = document.getElementById('monthlyPatientsChart').getContext('2d');
+            const monthlyPatientsChart = new Chart(monthlyPatientsCtx, {
+                type: 'bar',
+                data: {
+                    labels: [
+                        <?php 
+                            $months = array_map(function($month) { 
+                                return "'" . date('M Y', strtotime($month . '-01')) . "'"; 
+                            }, array_keys($monthly_patients));
+                            echo implode(',', $months);
+                        ?>
+                    ],
+                    datasets: [{
+                        label: 'Monthly Patient Registrations',
+                        data: [<?php echo implode(',', array_values($monthly_patients)); ?>],
+                        backgroundColor: 'rgba(99, 255, 132, 0.6)',
+                        borderColor: 'rgba(99, 255, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
                         }
                     }
                 }

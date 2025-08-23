@@ -44,15 +44,6 @@ try {
     $stmt->execute([':patient_id' => $patient['patient_id']]);
     $counts['appointments'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Count upcoming appointments
-    $query = "SELECT COUNT(*) as total FROM appointments 
-              WHERE patient_id = :patient_id 
-              AND appointment_date >= CURDATE() 
-              AND status_id IN (1, 2)";
-    $stmt = $conn->prepare($query);
-    $stmt->execute([':patient_id' => $patient['patient_id']]);
-    $counts['upcoming_appointments'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-
     // Count medical records (count whole records)
     $query = "SELECT COUNT(DISTINCT record_id) as total FROM medical_records WHERE patient_id = :patient_id";
     $stmt = $conn->prepare($query);
@@ -334,77 +325,6 @@ try {
             background: #ffebee;
             color: #c62828;
         }
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .action-button {
-            display: flex;
-            align-items: center;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            text-decoration: none;
-            color: #333;
-            transition: all 0.3s ease;
-            border: 1px solid #eee;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .action-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            border-color: #4a90e2;
-            text-decoration: none;
-            color: #4a90e2;
-        }
-
-        .action-icon {
-            width: 50px;
-            height: 50px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            transition: all 0.3s ease;
-        }
-
-        .action-button:hover .action-icon {
-            background: #e3f2fd;
-        }
-
-        .action-icon i {
-            font-size: 1.5em;
-            color: #4a90e2;
-        }
-
-        .action-content {
-            flex: 1;
-        }
-
-        .action-title {
-            font-size: 1.1em;
-            font-weight: 500;
-            margin-bottom: 5px;
-            display: block;
-        }
-
-        .action-description {
-            font-size: 0.9em;
-            color: #666;
-            display: block;
-        }
-
-        @media (max-width: 768px) {
-            .quick-actions {
-                grid-template-columns: 1fr;
-            }
-        }
     </style>
 </head>
 <body>
@@ -432,12 +352,6 @@ try {
             </div>
             
             <div class="stat-card">
-                <i class="fas fa-calendar-day"></i>
-                <h3>Upcoming</h3>
-                <p><?php echo number_format($counts['upcoming_appointments']); ?></p>
-            </div>
-            
-            <div class="stat-card">
                 <i class="fas fa-notes-medical"></i>
                 <h3>Medical Records</h3>
                 <p><?php echo number_format($counts['medical_records']); ?></p>
@@ -447,49 +361,6 @@ try {
                 <i class="fas fa-syringe"></i>
                 <h3>Immunizations</h3>
                 <p><?php echo number_format($counts['immunizations']); ?></p>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="recent-activity">
-            <h2>Quick Actions</h2>
-            <div class="quick-actions">
-                <a href="schedule_appointment.php" class="action-button">
-                    <div class="action-icon">
-                        <i class="fas fa-calendar-plus"></i>
-                    </div>
-                    <div class="action-content">
-                        <span class="action-title">Schedule Appointment</span>
-                        <span class="action-description">Book a new appointment with a health worker</span>
-                    </div>
-                </a>
-                <a href="medical_history.php" class="action-button">
-                    <div class="action-icon">
-                        <i class="fas fa-notes-medical"></i>
-                    </div>
-                    <div class="action-content">
-                        <span class="action-title">Medical Records</span>
-                        <span class="action-description">View your complete medical history</span>
-                    </div>
-                </a>
-                <a href="immunization.php" class="action-button">
-                    <div class="action-icon">
-                        <i class="fas fa-syringe"></i>
-                    </div>
-                    <div class="action-content">
-                        <span class="action-title">Immunizations</span>
-                        <span class="action-description">Track your vaccination records</span>
-                    </div>
-                </a>
-                <a href="appointments.php" class="action-button">
-                    <div class="action-icon">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                    <div class="action-content">
-                        <span class="action-title">My Appointments</span>
-                        <span class="action-description">Manage your scheduled appointments</span>
-                    </div>
-                </a>
             </div>
         </div>
 

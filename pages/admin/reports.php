@@ -704,23 +704,126 @@ if ($report_type) {
             <?php endif; ?>
 
             <?php if ($report_type === 'appointments_list' || $report_type === 'patients_list'): ?>
-                <div class="reports-grid">
-                    <?php foreach ($report_data as $row): ?>
-                        <div class="report-card">
-                            <?php if ($report_type === 'appointments_list'): ?>
-                                <div class="header">
-                                    <h3 class="title"><?php echo htmlspecialchars($row['patient_name']); ?></h3>
-                                    <div class="info-item">
-                                        <i class="fas fa-user-md"></i>
-                                        <span><?php echo htmlspecialchars($row['health_worker_name']); ?></span>
+                <!-- Desktop Table View -->
+                <div class="desktop-table" style="display: none;">
+                    <?php if ($report_type === 'appointments_list'): ?>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Appointment ID</th>
+                                        <th>Patient Name</th>
+                                        <th>Date</th>
+                                        <th>Time</th>
+                                        <th>Health Worker</th>
+                                        <th>Reason</th>
+                                        <th>Status</th>
+                                        <th>Contact</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($report_data as $row): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($row['appointment_id']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['patient_name']); ?></td>
+                                            <td><?php echo date('M d, Y', strtotime($row['appointment_date'])); ?></td>
+                                            <td><?php echo date('g:i A', strtotime($row['appointment_time'])); ?></td>
+                                            <td><?php echo htmlspecialchars($row['health_worker_name']); ?></td>
+                                            <td><?php echo !empty($row['reason']) ? htmlspecialchars($row['reason']) : '-'; ?></td>
+                                            <td>
+                                                <span class="status-badge <?php echo strtolower(str_replace(' ', '-', $row['status'])); ?>">
+                                                    <?php echo htmlspecialchars($row['status']); ?>
+                                                </span>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($row['patient_contact']); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: // patients_list ?>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Patient ID</th>
+                                        <th>Name</th>
+                                        <th>Gender</th>
+                                        <th>Age</th>
+                                        <th>Blood Type</th>
+                                        <th>Contact</th>
+                                        <th>Email</th>
+                                        <th>Emergency Contact</th>
+                                        <th>Statistics</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($report_data as $row): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($row['patient_id']); ?></td>
+                                            <td>
+                                                <?php 
+                                                $full_name = trim($row['first_name'] . ' ' . ($row['middle_name'] ? $row['middle_name'] . ' ' : '') . $row['last_name']);
+                                                echo htmlspecialchars($full_name);
+                                                ?>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($row['gender']); ?></td>
+                                            <td>
+                                                <?php 
+                                                $age = !empty($row['date_of_birth']) ? 
+                                                    date_diff(date_create($row['date_of_birth']), date_create('today'))->y : '-';
+                                                echo $age;
+                                                ?>
+                                            </td>
+                                            <td><?php echo !empty($row['blood_type']) ? htmlspecialchars($row['blood_type']) : '-'; ?></td>
+                                            <td><?php echo htmlspecialchars($row['mobile_number']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['email']); ?></td>
+                                            <td>
+                                                <?php if (!empty($row['emergency_contact_name'])): ?>
+                                                    <?php echo htmlspecialchars($row['emergency_contact_name']); ?>
+                                                    <br><small class="text-muted"><?php echo htmlspecialchars($row['emergency_contact_number']); ?></small>
+                                                <?php else: ?>
+                                                    -
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    Appointments: <?php echo $row['appointment_count']; ?><br>
+                                                    Immunizations: <?php echo $row['immunization_count']; ?><br>
+                                                    Records: <?php echo $row['medical_record_count']; ?>
+                                                </small>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Mobile Card View -->
+                <div class="mobile-cards">
+                    <div class="reports-grid">
+                        <?php foreach ($report_data as $row): ?>
+                            <div class="report-card">
+                                <?php if ($report_type === 'appointments_list'): ?>
+                                    <div class="header">
+                                        <h3 class="title"><?php echo htmlspecialchars($row['patient_name']); ?></h3>
+                                        <span class="status-badge <?php echo strtolower(str_replace(' ', '-', $row['status'])); ?>">
+                                            <?php echo htmlspecialchars($row['status']); ?>
+                                        </span>
                                     </div>
                                     <div class="info-item">
-                                        <i class="fas fa-calendar"></i>
+                                        <i class="fas fa-calendar-alt"></i>
                                         <span><?php echo date('M d, Y', strtotime($row['appointment_date'])); ?></span>
                                     </div>
                                     <div class="info-item">
                                         <i class="fas fa-clock"></i>
-                                        <span><?php echo date('h:i A', strtotime($row['appointment_time'])); ?></span>
+                                        <span><?php echo date('g:i A', strtotime($row['appointment_time'])); ?></span>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-user-md"></i>
+                                        <span><?php echo htmlspecialchars($row['health_worker_name']); ?></span>
                                     </div>
                                     <div class="info-item">
                                         <i class="fas fa-phone"></i>
@@ -728,101 +831,174 @@ if ($report_type) {
                                     </div>
                                     <?php if (!empty($row['reason'])): ?>
                                     <div class="info-item">
-                                        <i class="fas fa-comment"></i>
+                                        <i class="fas fa-notes-medical"></i>
                                         <span><?php echo htmlspecialchars($row['reason']); ?></span>
                                     </div>
                                     <?php endif; ?>
-                                    <div class="info-item">
-                                        <i class="fas fa-info-circle"></i>
-                                        <span class="status-badge <?php echo strtolower($row['status']); ?>">
-                                            <?php echo $row['status']; ?>
-                                        </span>
-                                    </div>
-                                </div>
-                            <?php else: ?>
-                                <div class="patient-card">
-                                    <div class="patient-header">
-                                        <h3 class="patient-name">
-                                            <?php echo htmlspecialchars($row['last_name'] . ', ' . $row['first_name']); ?>
-                                            <?php if ($row['middle_name']): ?>
-                                                <?php echo ' ' . htmlspecialchars($row['middle_name'][0]) . '.'; ?>
+                                <?php else: ?>
+                                    <div class="patient-card">
+                                        <div class="patient-header">
+                                            <h3 class="patient-name">
+                                                <?php echo htmlspecialchars($row['last_name'] . ', ' . $row['first_name']); ?>
+                                                <?php if ($row['middle_name']): ?>
+                                                    <?php echo ' ' . htmlspecialchars($row['middle_name'][0]) . '.'; ?>
+                                                <?php endif; ?>
+                                            </h3>
+                                        </div>
+                                        
+                                        <div class="patient-details">
+                                            <div class="detail-item">
+                                                <i class="fas fa-id-card"></i>
+                                                <span>ID: <?php echo htmlspecialchars($row['patient_id']); ?></span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <i class="fas fa-venus-mars"></i>
+                                                <span><?php echo htmlspecialchars($row['gender']); ?></span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <i class="fas fa-birthday-cake"></i>
+                                                <span>
+                                                    <?php 
+                                                        if (!empty($row['date_of_birth'])) {
+                                                            echo date('M d, Y', strtotime($row['date_of_birth']));
+                                                            $age = date_diff(date_create($row['date_of_birth']), date_create('today'))->y;
+                                                            echo " ($age years old)";
+                                                        } else {
+                                                            echo 'DOB not available';
+                                                        }
+                                                    ?>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <i class="fas fa-envelope"></i>
+                                                <span><?php echo htmlspecialchars($row['email']); ?></span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <i class="fas fa-phone"></i>
+                                                <span><?php echo htmlspecialchars($row['mobile_number']); ?></span>
+                                            </div>
+                                            <?php if ($row['blood_type']): ?>
+                                            <div class="detail-item">
+                                                <i class="fas fa-tint"></i>
+                                                <span>Blood Type: <?php echo htmlspecialchars($row['blood_type']); ?></span>
+                                            </div>
                                             <?php endif; ?>
-                                        </h3>
-                                    </div>
-                                    
-                                    <div class="patient-details">
-                                        <div class="detail-item">
-                                            <i class="fas fa-venus-mars"></i>
-                                            <span><?php echo htmlspecialchars($row['gender']); ?></span>
-                                        </div>
-                                        
-                                        <div class="detail-item">
-                                            <i class="fas fa-birthday-cake"></i>
-                                            <span>
-                                                <?php 
-                                                    echo date('M d, Y', strtotime($row['date_of_birth']));
-                                                    $age = date_diff(date_create($row['date_of_birth']), date_create('today'))->y;
-                                                    echo " ($age years old)";
-                                                ?>
-                                            </span>
-                                        </div>
-                                        
-                                        <div class="detail-item">
-                                            <i class="fas fa-envelope"></i>
-                                            <span><?php echo htmlspecialchars($row['email']); ?></span>
-                                        </div>
-                                        
-                                        <div class="detail-item">
-                                            <i class="fas fa-phone"></i>
-                                            <span><?php echo htmlspecialchars($row['mobile_number']); ?></span>
-                                        </div>
-                                        
-                                        <?php if ($row['blood_type']): ?>
-                                        <div class="detail-item">
-                                            <i class="fas fa-tint"></i>
-                                            <span>Blood Type: <?php echo htmlspecialchars($row['blood_type']); ?></span>
-                                        </div>
-                                        <?php endif; ?>
-                                        
-                                        <div class="detail-item">
-                                            <i class="fas fa-weight"></i>
-                                            <span>
-                                                <?php 
-                                                    if ($row['height']) echo htmlspecialchars($row['height']) . ' cm';
-                                                    if ($row['height'] && $row['weight']) echo ' / ';
-                                                    if ($row['weight']) echo htmlspecialchars($row['weight']) . ' kg';
-                                                ?>
-                                            </span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="patient-stats">
-                                        <div class="stat-item">
-                                            <div class="stat-number"><?php echo $row['appointment_count']; ?></div>
-                                            <div class="stat-label">
-                                                <i class="fas fa-calendar-check"></i> Appointments
+                                            <div class="detail-item">
+                                                <i class="fas fa-weight"></i>
+                                                <span>
+                                                    <?php 
+                                                        if ($row['height']) echo htmlspecialchars($row['height']) . ' cm';
+                                                        if ($row['height'] && $row['weight']) echo ' / ';
+                                                        if ($row['weight']) echo htmlspecialchars($row['weight']) . ' kg';
+                                                    ?>
+                                                </span>
                                             </div>
                                         </div>
-                                        <div class="stat-item">
-                                            <div class="stat-number"><?php echo $row['immunization_count']; ?></div>
-                                            <div class="stat-label">
-                                                <i class="fas fa-syringe"></i> Immunizations
+                                        
+                                        <div class="patient-stats">
+                                            <div class="stat-item">
+                                                <div class="stat-number"><?php echo $row['appointment_count']; ?></div>
+                                                <div class="stat-label">Appointments</div>
                                             </div>
-                                        </div>
-                                        <div class="stat-item">
-                                            <div class="stat-number"><?php echo $row['medical_record_count']; ?></div>
-                                            <div class="stat-label">
-                                                <i class="fas fa-notes-medical"></i> Records
+                                            <div class="stat-item">
+                                                <div class="stat-number"><?php echo $row['immunization_count']; ?></div>
+                                                <div class="stat-label">Immunizations</div>
+                                            </div>
+                                            <div class="stat-item">
+                                                <div class="stat-number"><?php echo $row['medical_record_count']; ?></div>
+                                                <div class="stat-label">Records</div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
 
                 <style>
+                    /* Responsive design for desktop table and mobile cards */
+                    .desktop-table {
+                        background: white;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        padding: 20px;
+                        margin-bottom: 20px;
+                    }
+
+                    .desktop-table .table {
+                        margin-bottom: 0;
+                    }
+
+                    .desktop-table .table th {
+                        background-color: #2c3e50;
+                        color: white;
+                        border: none;
+                        padding: 12px 8px;
+                        font-weight: 600;
+                        font-size: 0.9rem;
+                    }
+
+                    .desktop-table .table td {
+                        padding: 12px 8px;
+                        vertical-align: middle;
+                        border-top: 1px solid #dee2e6;
+                    }
+
+                    .desktop-table .table tbody tr:hover {
+                        background-color: #f8f9fa;
+                    }
+
+                    /* Status badges for table */
+                    .status-badge {
+                        display: inline-block;
+                        padding: 4px 8px;
+                        border-radius: 4px;
+                        font-size: 0.8rem;
+                        font-weight: 500;
+                        text-transform: capitalize;
+                    }
+
+                    .status-badge.completed {
+                        background: #d4edda;
+                        color: #155724;
+                    }
+
+                    .status-badge.scheduled,
+                    .status-badge.confirmed {
+                        background: #d1ecf1;
+                        color: #0c5460;
+                    }
+
+                    .status-badge.cancelled {
+                        background: #f8d7da;
+                        color: #721c24;
+                    }
+
+                    /* Mobile cards styling */
+                    .mobile-cards {
+                        display: block;
+                    }
+
+                    /* Responsive behavior */
+                    @media (min-width: 769px) {
+                        .desktop-table {
+                            display: block !important;
+                        }
+                        .mobile-cards {
+                            display: none;
+                        }
+                    }
+
+                    @media (max-width: 768px) {
+                        .desktop-table {
+                            display: none !important;
+                        }
+                        .mobile-cards {
+                            display: block;
+                        }
+                    }
+
                     /* Patient card specific styles */
                     .patient-card {
                         display: flex;

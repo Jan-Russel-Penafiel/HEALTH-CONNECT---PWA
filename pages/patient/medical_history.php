@@ -87,6 +87,80 @@ try {
             margin: 1rem 0;
         }
         
+        /* Table styles for desktop */
+        .medical-records-table {
+            display: none;
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .medical-records-table th,
+        .medical-records-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+        
+        .medical-records-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .medical-records-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .medical-records-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .table-cell-content {
+            max-width: 200px;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+        
+        .table-follow-up {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-top: 0.25rem;
+        }
+        
+        /* Desktop view - show table, hide cards */
+        @media (min-width: 992px) {
+            .medical-records-grid {
+                display: none;
+            }
+            
+            .medical-records-table {
+                display: table;
+            }
+        }
+        
+        /* Mobile view - show cards, hide table */
+        @media (max-width: 991px) {
+            .medical-records-grid {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+            
+            .medical-records-table {
+                display: none;
+            }
+        }
+        
         .medical-record {
             background: #fff;
             border-radius: 8px;
@@ -218,6 +292,86 @@ try {
                 <p>You don't have any medical records yet.</p>
             </div>
         <?php else: ?>
+            <!-- Desktop Table View -->
+            <table class="medical-records-table">
+                <thead>
+                    <tr>
+                        <th>Visit Date</th>
+                        <th>Health Worker</th>
+                        <th>Chief Complaint</th>
+                        <th>Diagnosis</th>
+                        <th>Treatment</th>
+                        <th>Follow-up</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($medical_records as $record): ?>
+                        <tr>
+                            <td>
+                                <div style="font-weight: 600; color: #2c3e50;">
+                                    <?php echo date('M j, Y', strtotime($record['visit_date'])); ?>
+                                </div>
+                                <div style="color: #7f8c8d; font-size: 0.9rem;">
+                                    <?php echo date('l', strtotime($record['visit_date'])); ?>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-weight: 600; color: #2c3e50;">
+                                    <?php echo htmlspecialchars($record['health_worker_name']); ?>
+                                </div>
+                                <div style="color: #7f8c8d; font-size: 0.9rem;">
+                                    <?php echo htmlspecialchars($record['health_worker_position']); ?>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="table-cell-content">
+                                    <?php echo nl2br(htmlspecialchars($record['chief_complaint'] ?? 'Not specified')); ?>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="table-cell-content">
+                                    <?php echo nl2br(htmlspecialchars($record['diagnosis'] ?? 'Not specified')); ?>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="table-cell-content">
+                                    <?php echo nl2br(htmlspecialchars($record['treatment'] ?? 'Not specified')); ?>
+                                    <?php if (!empty($record['prescription'])): ?>
+                                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #eee;">
+                                            <strong>Prescription:</strong><br>
+                                            <?php echo nl2br(htmlspecialchars($record['prescription'])); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td>
+                                <?php if (!empty($record['follow_up_date'])): ?>
+                                    <div class="table-follow-up">
+                                        <?php echo date('M j, Y', strtotime($record['follow_up_date'])); ?>
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #666; margin-top: 0.25rem;">
+                                        <?php 
+                                        $today = new DateTime();
+                                        $follow_up = new DateTime($record['follow_up_date']);
+                                        $interval = $today->diff($follow_up);
+                                        
+                                        if ($follow_up < $today) {
+                                            echo 'Overdue';
+                                        } else {
+                                            echo 'In ' . $interval->days . ' days';
+                                        }
+                                        ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span style="color: #999; font-style: italic;">None</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            
+            <!-- Mobile Card View -->
             <div class="medical-records-grid">
                 <?php foreach ($medical_records as $record): ?>
                     <div class="medical-record">

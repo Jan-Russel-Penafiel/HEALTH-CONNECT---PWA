@@ -17,39 +17,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
             case 'add':
-                try {
-                    // Insert into users table
-                    $query = "INSERT INTO users (role_id, username, email, mobile_number, first_name, middle_name, last_name, gender, address) 
-                             VALUES ((SELECT role_id FROM user_roles WHERE role_name = 'health_worker'), :username, :email, :mobile, :fname, :mname, :lname, :gender, :address)";
-                    $stmt = $conn->prepare($query);
-                    $stmt->execute([
-                        ':username' => $_POST['username'],
-                        ':email' => $_POST['email'],
-                        ':mobile' => $_POST['mobile_number'],
-                        ':fname' => $_POST['first_name'],
-                        ':mname' => $_POST['middle_name'],
-                        ':lname' => $_POST['last_name'],
-                        ':gender' => $_POST['gender'],
-                        ':address' => $_POST['address']
-                    ]);
-                    
-                    $user_id = $conn->lastInsertId();
-                    
-                    // Insert into health_workers table
-                    $query = "INSERT INTO health_workers (user_id, position, license_number, specialty) 
-                             VALUES (:user_id, :position, :license, :specialty)";
-                    $stmt = $conn->prepare($query);
-                    $stmt->execute([
-                        ':user_id' => $user_id,
-                        ':position' => $_POST['position'],
-                        ':license' => $_POST['license_number'],
-                        ':specialty' => $_POST['specialty']
-                    ]);
-                    
-                    $_SESSION['success'] = "Health worker added successfully.";
-                } catch (PDOException $e) {
-                    error_log("Error adding health worker: " . $e->getMessage());
-                    $_SESSION['error'] = "Error adding health worker. Please try again.";
+                // Get user input
+                $username = trim($_POST['username']);
+                $email = trim($_POST['email']);
+                $first_name = trim($_POST['first_name']);
+                $middle_name = trim($_POST['middle_name'] ?? '');
+                $last_name = trim($_POST['last_name']);
+                $gender = trim($_POST['gender']);
+                $mobile_number = trim($_POST['mobile_number']);
+                $address = trim($_POST['address']);
+                $position = trim($_POST['position']);
+                $license_number = trim($_POST['license_number']);
+                $specialty = trim($_POST['specialty']);
+
+                // Validate required fields
+                if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || empty($gender) || empty($position) || empty($license_number) || empty($specialty)) {
+                    $_SESSION['error'] = "Please fill in all required fields.";
+                } else {
+                    try {
+                        $conn->beginTransaction();
+                        // Check if username already exists
+                        $check_query = "SELECT COUNT(*) FROM users WHERE username = :username";
+                        $check_stmt = $conn->prepare($check_query);
+                        $check_stmt->bindParam(":username", $username);
+                        $check_stmt->execute();
+                        if ($check_stmt->fetchColumn() > 0) {
+                            $_SESSION['error'] = "Username already exists. Please choose another.";
+                            $conn->rollBack();
+                        } else {
+                            // Check if email already exists
+                            $check_query = "SELECT COUNT(*) FROM users WHERE email = :email";
+                            $check_stmt = $conn->prepare($check_query);
+                            $check_stmt->bindParam(":email", $email);
+                            $check_stmt->execute();
+                            if ($check_stmt->fetchColumn() > 0) {
+                                $_SESSION['error'] = "Email already exists. Please use another or login.";
+                                $conn->rollBack();
+                            } else {
+                                // Insert into users table
+                                $query = "INSERT INTO users (role_id, username, email, mobile_number, first_name, middle_name, last_name, gender, address) VALUES ((SELECT role_id FROM user_roles WHERE role_name = 'health_worker'), :username, :email, :mobile, :fname, :mname, :lname, :gender, :address)";
+                                $stmt = $conn->prepare($query);
+                                $stmt->execute([
+                                    ':username' => $username,
+                                    ':email' => $email,
+                                    ':mobile' => $mobile_number,
+                                    ':fname' => $first_name,
+                                    ':mname' => $middle_name,
+                                    ':lname' => $last_name,
+                                    ':gender' => $gender,
+                                    ':address' => $address
+                                ]);
+                                $user_id = $conn->lastInsertId();
+                                // Insert into health_workers table
+                                $query = "INSERT INTO health_workers (user_id, position, license_number, specialty) VALUES (:user_id, :position, :license, :specialty)";
+                                $stmt = $conn->prepare($query);
+                                $stmt->execute([
+                                    ':user_id' => $user_id,
+                                    ':position' => $position,
+                                    ':license' => $license_number,
+                                    ':specialty' => $specialty
+                                ]);
+                                $conn->commit();
+                                $_SESSION['success'] = "Health worker added successfully.";
+                            }
+                        }
+                    } catch (PDOException $e) {
+                        $conn->rollBack();
+                        error_log("Error adding health worker: " . $e->getMessage());
+                        $_SESSION['error'] = "Error adding health worker. Please try again.";
+                    }
                 }
                 break;
                 
@@ -164,6 +200,75 @@ try {
     <title>Health Workers Management</title>
     <?php include __DIR__ . '/../../includes/header_links.php'; ?>
     <style>
+        /* Desktop Table View */
+        .desktop-table {
+            display: none;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+        }
+        
+        .data-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .table-actions .btn-action {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .table-actions .btn-edit {
+            background: #4a90e2;
+            color: white;
+        }
+        
+        .table-actions .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .table-actions .btn-action:hover {
+            opacity: 0.9;
+        }
+        
+        /* Mobile Cards View */
+        .mobile-cards {
+            display: block;
+        }
+        
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -323,7 +428,27 @@ try {
             font-style: italic;
         }
 
-        @media (max-width: 600px) {
+        /* Desktop Layout */
+        @media (min-width: 769px) {
+            .desktop-table {
+                display: block;
+            }
+            
+            .mobile-cards {
+                display: none;
+            }
+        }
+
+        /* Mobile Layout */
+        @media (max-width: 768px) {
+            .desktop-table {
+                display: none;
+            }
+            
+            .mobile-cards {
+                display: block;
+            }
+            
             .search-button {
                 padding: 6px 10px;
                 font-size: 0.9rem;
@@ -397,7 +522,71 @@ try {
             </form>
         </div>
         
-        <div class="cards-grid">
+        <!-- Desktop Table View -->
+        <div class="desktop-table">
+            <?php if (!empty($health_workers)): ?>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Specialty</th>
+                            <th>License</th>
+                            <th>Email</th>
+                            <th>Mobile</th>
+                            <th>Address</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($health_workers as $worker): ?>
+                            <tr>
+                                <td>
+                                    <strong>
+                                        <?php echo htmlspecialchars($worker['last_name'] . ', ' . $worker['first_name']); ?>
+                                        <?php if ($worker['middle_name']): ?>
+                                            <?php echo ' ' . htmlspecialchars($worker['middle_name'][0]) . '.'; ?>
+                                        <?php endif; ?>
+                                    </strong>
+                                </td>
+                                <td><?php echo htmlspecialchars($worker['position']); ?></td>
+                                <td><?php echo htmlspecialchars($worker['specialty']); ?></td>
+                                <td><?php echo htmlspecialchars($worker['license_number']); ?></td>
+                                <td><?php echo htmlspecialchars($worker['email']); ?></td>
+                                <td><?php echo htmlspecialchars($worker['mobile_number']); ?></td>
+                                <td><?php echo htmlspecialchars($worker['address'] ? $worker['address'] : 'No address provided'); ?></td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-action btn-edit" onclick="showEditModal(<?php echo htmlspecialchars(json_encode($worker)); ?>)">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <button class="btn-action btn-delete" onclick="confirmDelete(<?php echo $worker['user_id']; ?>)">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <div class="empty-state">
+                    <?php if (!empty($search)): ?>
+                        <i class="fas fa-search fa-3x"></i>
+                        <h3>No Health Workers Found</h3>
+                        <p>No health workers match your search criteria. Try different keywords or <a href="<?php echo $_SERVER['PHP_SELF']; ?>">clear the search</a>.</p>
+                    <?php else: ?>
+                        <i class="fas fa-user-md fa-3x"></i>
+                        <h3>No Health Workers Found</h3>
+                        <p>Click the "Add Health Worker" button to add a new health worker.</p>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        
+        <!-- Mobile Cards View -->
+        <div class="mobile-cards">
+            <div class="cards-grid">
             <?php if (!empty($health_workers)): ?>
                 <?php foreach ($health_workers as $worker): ?>
                     <div class="worker-card">
@@ -459,6 +648,7 @@ try {
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
+            </div>
         </div>
     </div>
     
@@ -483,6 +673,11 @@ try {
                         <div class="form-group">
                             <label for="email">Email</label>
                             <input type="email" id="email" name="email" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" name="password" class="form-control" required>
                         </div>
                     </div>
                     

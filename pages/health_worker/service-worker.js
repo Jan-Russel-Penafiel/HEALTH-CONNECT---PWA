@@ -1,5 +1,5 @@
 // Service Worker for HealthConnect Health Worker PWA
-const CACHE_VERSION = '1.0.3';
+const CACHE_VERSION = '1.0.5'; // Updated to clear installation prompts
 const CACHE_NAME = `healthconnect-health-worker-v${CACHE_VERSION}`;
 const urlsToCache = [
   '/connect/pages/health_worker/dashboard.php',
@@ -19,7 +19,10 @@ const urlsToCache = [
   '/connect/offline.html'
 ];
 
-// Install event - cache essential assets
+// Auto-update check interval
+const CHECK_INTERVAL = 60 * 1000; // 1 minute
+
+// Install event - cache essential assets and skip waiting for automatic activation
 self.addEventListener('install', event => {
   console.log('[ServiceWorker] Installing version:', CACHE_VERSION);
   event.waitUntil(
@@ -29,19 +32,22 @@ self.addEventListener('install', event => {
         return cache.addAll(urlsToCache);
       })
       .then(() => {
-        console.log('[ServiceWorker] Install completed');
-        // Activate new service worker immediately
+        console.log('[ServiceWorker] Install completed - Auto activating');
+        // Automatically skip waiting for immediate activation
         return self.skipWaiting();
+      })
+      .catch(error => {
+        console.error('[ServiceWorker] Install failed:', error);
       })
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and take control immediately
 self.addEventListener('activate', event => {
   console.log('[ServiceWorker] Activating version:', CACHE_VERSION);
   event.waitUntil(
     Promise.all([
-      // Take control of all clients immediately
+      // Take control of all clients immediately for auto-update
       self.clients.claim(),
       // Remove old caches
       caches.keys().then(cacheNames => {
@@ -53,9 +59,19 @@ self.addEventListener('activate', event => {
             }
           })
         );
+      }),
+      // Notify all clients about the automatic update (silently)
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'SW_UPDATED',
+            version: CACHE_VERSION,
+            message: 'Health Worker app updated automatically to the latest version'
+          });
+        });
       })
     ]).then(() => {
-      console.log('[ServiceWorker] Activate completed');
+      console.log('[ServiceWorker] Activate completed - Auto update successful');
     })
   );
 });
@@ -116,26 +132,29 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Handle skip waiting message
+// Handle automatic updates and skip waiting
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[ServiceWorker] Auto skip waiting for seamless update');
     self.skipWaiting();
   }
 });
 
-// Function to perform the update check
-const checkForUpdates = async () => {
+// Automatic update function with error handling
+const performAutoUpdate = async () => {
   try {
-    console.log('[ServiceWorker] Checking for updates...');
+    console.log('[ServiceWorker] Performing automatic update check...');
     await self.registration.update();
-    console.log('[ServiceWorker] Update check completed');
+    console.log('[ServiceWorker] Auto update check completed successfully');
   } catch (error) {
-    console.error('[ServiceWorker] Update check failed:', error);
+    console.error('[ServiceWorker] Auto update check failed:', error);
+    // Retry after 5 minutes on failure
+    setTimeout(performAutoUpdate, 5 * 60 * 1000);
   }
 };
 
-// Initial update check
-setTimeout(checkForUpdates, 5000);
+// Start automatic updates immediately after service worker is ready
+setTimeout(performAutoUpdate, 3000); // Initial check after 3 seconds
 
-// Set up periodic update checks
-setInterval(checkForUpdates, 15 * 60 * 1000); // Check every 15 minutes 
+// Set up continuous automatic update checks
+setInterval(performAutoUpdate, CHECK_INTERVAL); 

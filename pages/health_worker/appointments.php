@@ -107,11 +107,122 @@ try {
     <!-- Add jsQR library for QR code scanning -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
-        .appointments-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-            padding: 1.5rem 0;
+        /* Desktop Table Layout */
+        @media (min-width: 992px) {
+            .appointments-grid {
+                display: none;
+            }
+            
+            .appointments-table-container {
+                display: block;
+            }
+            
+            .appointments-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+                background: white;
+                border-radius: 10px;
+                overflow: hidden;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            
+            .appointments-table th,
+            .appointments-table td {
+                padding: 15px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }
+            
+            .appointments-table th {
+                background-color: #f8f9fa;
+                font-weight: 600;
+                color: #333;
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
+            .appointments-table tbody tr {
+                transition: all 0.2s ease;
+            }
+            
+            .appointments-table tbody tr:hover {
+                background-color: #f8f9fa;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            
+            .appointments-table tbody tr.highlighted {
+                background-color: #fff3cd;
+                box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+                animation: highlight-pulse 2s ease-in-out;
+            }
+            
+            .table-patient-name {
+                font-weight: 600;
+                color: #333;
+            }
+            
+            .table-contact-info {
+                font-size: 0.9rem;
+                color: #666;
+            }
+            
+            .table-datetime {
+                font-weight: 500;
+                color: #2c3e50;
+            }
+            
+            .table-date {
+                color: #666;
+                font-size: 0.9rem;
+            }
+            
+            .table-status-badge {
+                padding: 0.4rem 0.8rem;
+                border-radius: 20px;
+                font-weight: 600;
+                font-size: 0.8rem;
+                text-transform: uppercase;
+                white-space: nowrap;
+            }
+            
+            .table-actions {
+                display: flex;
+                gap: 5px;
+                flex-wrap: wrap;
+            }
+            
+            .table-actions .btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+                display: flex;
+                align-items: center;
+                gap: 0.3rem;
+                white-space: nowrap;
+            }
+            
+            .table-reason {
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+
+        /* Mobile Card Layout */
+        @media (max-width: 991px) {
+            .appointments-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 1.5rem;
+                padding: 1.5rem 0;
+            }
+            
+            .appointments-table-container {
+                display: none;
+            }
         }
 
         .appointment-card {
@@ -173,27 +284,32 @@ try {
             text-transform: uppercase;
         }
 
-        .status-badge.scheduled {
+        .status-badge.scheduled,
+        .table-status-badge.scheduled {
             background: #e3f2fd;
             color: #1976d2;
         }
 
-        .status-badge.confirmed {
+        .status-badge.confirmed,
+        .table-status-badge.confirmed {
             background: #e8f5e9;
             color: #2e7d32;
         }
 
-        .status-badge.done {
+        .status-badge.done,
+        .table-status-badge.done {
             background: #f5f5f5;
             color: #616161;
         }
 
-        .status-badge.cancelled {
+        .status-badge.cancelled,
+        .table-status-badge.cancelled {
             background: #ffebee;
             color: #c62828;
         }
 
-        .status-badge.no-show {
+        .status-badge.no-show,
+        .table-status-badge.no-show {
             background: #fce4ec;
             color: #c2185b;
         }
@@ -251,11 +367,16 @@ try {
         }
 
         .empty-state {
-            grid-column: 1 / -1;
             text-align: center;
             padding: 3rem;
             background: #f8f9fa;
             border-radius: 8px;
+        }
+
+        @media (min-width: 992px) {
+            .empty-state {
+                grid-column: 1 / -1;
+            }
         }
 
         .empty-state i {
@@ -289,10 +410,6 @@ try {
         }
 
         @media (max-width: 768px) {
-            .appointments-grid {
-                grid-template-columns: 1fr;
-            }
-
             .filter-grid {
                 grid-template-columns: 1fr;
             }
@@ -662,6 +779,81 @@ try {
             </div>
         </div>
 
+        <!-- Desktop Table Layout -->
+        <div class="appointments-table-container">
+            <?php if (empty($appointments)): ?>
+            <div class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <h3>No Appointments Found</h3>
+                <p>There are no appointments matching your search criteria.</p>
+            </div>
+            <?php else: ?>
+            <table class="appointments-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Patient</th>
+                        <th>Contact</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($appointments as $appointment): ?>
+                    <tr class="<?php echo strtolower($appointment['status']); ?>" data-appointment-id="<?php echo $appointment['id']; ?>">
+                        <td>
+                            <div class="table-datetime">
+                                <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
+                            </div>
+                            <div class="table-date">
+                                <?php echo date('M d, Y', strtotime($appointment['appointment_date'])); ?>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="table-patient-name">
+                                <?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="table-contact-info">
+                                <div><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($appointment['email']); ?></div>
+                                <div><i class="fas fa-phone"></i> <?php echo htmlspecialchars($appointment['patient_phone']); ?></div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="table-reason" title="<?php echo htmlspecialchars($appointment['reason'] ?? 'N/A'); ?>">
+                                <?php echo htmlspecialchars($appointment['reason'] ?? 'N/A'); ?>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="table-status-badge <?php echo strtolower($appointment['status']); ?>">
+                                <?php echo ucfirst($appointment['status']); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="table-actions">
+                                <a href="view_appointment.php?id=<?php echo $appointment['id']; ?>" class="btn btn-view" title="View Details">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <?php if ($appointment['status'] === 'Scheduled' || $appointment['status'] === 'Confirmed'): ?>
+                                <button class="btn btn-success" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Done')" title="Mark as Done">
+                                    <i class="fas fa-check"></i> Done
+                                </button>
+                                <button class="btn btn-danger" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Cancelled')" title="Cancel Appointment">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <!-- Mobile Card Layout -->
         <div class="appointments-grid">
             <?php if (empty($appointments)): ?>
             <div class="empty-state">

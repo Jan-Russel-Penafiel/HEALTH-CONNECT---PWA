@@ -10,6 +10,77 @@ $is_health_worker = isset($_SESSION['role']) && $_SESSION['role'] === 'health_wo
             <img src="/connect/assets/images/health-center.jpg" alt="HealthConnect">
             HealthConnect
         </a>
+        
+        <!-- Desktop Navigation -->
+        <div class="desktop-nav">
+            <?php if ($is_admin): ?>
+            <nav class="main-nav">
+                <a href="/connect/pages/admin/dashboard.php" class="nav-link <?php echo $current_page === 'dashboard.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/connect/pages/admin/health_workers.php" class="nav-link <?php echo $current_page === 'health_workers.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-user-md"></i>
+                    <span>Workers</span>
+                </a>
+                <a href="/connect/pages/admin/patients.php" class="nav-link <?php echo $current_page === 'patients.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-users"></i>
+                    <span>Patients</span>
+                </a>
+                <a href="/connect/pages/admin/reports.php" class="nav-link <?php echo $current_page === 'reports.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Reports</span>
+                </a>
+                <a href="/connect/pages/admin/settings.php" class="nav-link <?php echo $current_page === 'settings.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            <?php endif; ?>
+
+            <?php if ($is_health_worker): ?>
+            <nav class="main-nav">
+                <a href="/connect/pages/health_worker/dashboard.php" class="nav-link <?php echo $current_page === 'dashboard.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/connect/pages/health_worker/patients.php" class="nav-link <?php echo $current_page === 'patients.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-users"></i>
+                    <span>Patients</span>
+                </a>
+                <a href="/connect/pages/health_worker/appointments.php" class="nav-link <?php echo $current_page === 'appointments.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Appointments</span>
+                </a>
+                <a href="/connect/pages/health_worker/immunization.php" class="nav-link <?php echo $current_page === 'immunization.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-syringe"></i>
+                    <span>Immunization</span>
+                </a>
+            </nav>
+            <?php endif; ?>
+
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'patient'): ?>
+            <nav class="main-nav">
+                <a href="/connect/pages/patient/dashboard.php" class="nav-link <?php echo $current_page === 'dashboard.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/connect/pages/patient/appointments.php" class="nav-link <?php echo $current_page === 'appointments.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Appointments</span>
+                </a>
+                <a href="/connect/pages/patient/medical_history.php" class="nav-link <?php echo $current_page === 'medical_history.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-notes-medical"></i>
+                    <span>Records</span>
+                </a>
+                <a href="/connect/pages/patient/immunization.php" class="nav-link <?php echo $current_page === 'immunization.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-syringe"></i>
+                    <span>Immunization</span>
+                </a>
+            </nav>
+            <?php endif; ?>
+        </div>
+        
         <div class="user-menu">
             <button class="user-menu-toggle">
                 <i class="fas fa-user-circle"></i>
@@ -128,6 +199,7 @@ $is_health_worker = isset($_SESSION['role']) && $_SESSION['role'] === 'health_wo
     right: 0;
     z-index: 1000;
     height: 48px;
+    width: 100vw;
 }
 
 .top-navbar .container {
@@ -135,6 +207,10 @@ $is_health_worker = isset($_SESSION['role']) && $_SESSION['role'] === 'health_wo
     justify-content: space-between;
     align-items: center;
     height: 100%;
+    max-width: 100vw;
+    width: 100vw;
+    padding: 0 20px;
+    margin: 0;
 }
 
 .navbar-brand {
@@ -151,6 +227,48 @@ $is_health_worker = isset($_SESSION['role']) && $_SESSION['role'] === 'health_wo
     margin-right: 8px;
 }
 
+/* Desktop Navigation */
+.desktop-nav {
+    display: none;
+    flex: 1;
+    margin-left: 2rem;
+}
+
+.main-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.main-nav .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    color: #666;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.main-nav .nav-link i {
+    font-size: 0.9rem;
+}
+
+.main-nav .nav-link:hover {
+    color: #4CAF50;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.main-nav .nav-link.active {
+    color: #4CAF50;
+    background: rgba(76, 175, 80, 0.15);
+    font-weight: 600;
+}
+
+/* Mobile Footer Navigation */
 .footer-nav {
     position: fixed;
     bottom: 0;
@@ -258,6 +376,37 @@ body {
     padding-bottom: 56px;
 }
 
+/* Desktop Layout */
+@media (min-width: 769px) {
+    .desktop-nav {
+        display: block;
+    }
+    
+    .footer-nav {
+        display: none;
+    }
+    
+    body {
+        padding-bottom: 0;
+    }
+    
+    .top-navbar {
+        height: 56px;
+        width: 100vw;
+    }
+    
+    .top-navbar .container {
+        padding: 0 20px;
+        max-width: 100vw;
+        width: 100vw;
+    }
+    
+    body {
+        padding-top: 56px;
+    }
+}
+
+/* Mobile Layout */
 @media (max-width: 768px) {
     .navbar-brand span {
         display: none;
@@ -268,6 +417,14 @@ body {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+    
+    .desktop-nav {
+        display: none;
+    }
+    
+    .footer-nav {
+        display: flex;
     }
 }
 </style>

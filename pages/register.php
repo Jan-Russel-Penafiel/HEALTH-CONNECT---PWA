@@ -27,6 +27,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Get user input
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
+    $password = trim($_POST['password']);
     $first_name = trim($_POST['first_name']);
     $middle_name = trim($_POST['middle_name'] ?? '');
     $last_name = trim($_POST['last_name']);
@@ -36,7 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $address = trim($_POST['address']);
     
     // Validate input
-    if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || 
+    if (empty($username) || empty($email) || empty($password) || empty($first_name) || empty($last_name) || 
         empty($gender) || empty($date_of_birth)) {
         $error = "Please fill in all required fields";
     } else {
@@ -68,15 +69,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $role_id = $role_stmt->fetchColumn();
                     
                     // Insert user into users table
-                    $user_query = "INSERT INTO users (role_id, username, email, mobile_number, first_name, 
+                    $user_query = "INSERT INTO users (role_id, username, email, password, mobile_number, first_name, 
                                   middle_name, last_name, gender, date_of_birth, address) 
-                                  VALUES (:role_id, :username, :email, :mobile_number, :first_name, 
+                                  VALUES (:role_id, :username, :email, :password, :mobile_number, :first_name, 
                                   :middle_name, :last_name, :gender, :date_of_birth, :address)";
                     
                     $user_stmt = $conn->prepare($user_query);
                     $user_stmt->bindParam(":role_id", $role_id);
                     $user_stmt->bindParam(":username", $username);
                     $user_stmt->bindParam(":email", $email);
+                    $user_stmt->bindParam(":password", $password);
                     $user_stmt->bindParam(":mobile_number", $mobile_number);
                     $user_stmt->bindParam(":first_name", $first_name);
                     $user_stmt->bindParam(":middle_name", $middle_name);
@@ -153,6 +155,159 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background-color: #f8f9fa;
             padding-bottom: 70px; /* Add space for footer nav */
             padding-top: 60px; /* Match header height */
+        }
+        
+        /* Top Navbar Styles */
+        .top-navbar {
+            background: #fff;
+            padding: 0.5rem 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 56px;
+        }
+
+        .top-navbar .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
+            padding: 0 20px;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .navbar-brand img {
+            height: 24px;
+            margin-right: 8px;
+        }
+
+        /* Desktop Navigation */
+        .desktop-nav {
+            display: none;
+            flex: 1;
+            margin-left: 2rem;
+        }
+
+        .main-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .main-nav .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            color: #666;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .main-nav .nav-link i {
+            font-size: 0.9rem;
+        }
+
+        .main-nav .nav-link:hover {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .main-nav .nav-link.active {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.15);
+            font-weight: 600;
+        }
+
+        /* Auth Menu */
+        .auth-menu {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .auth-link {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            color: #666;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .auth-link:hover {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .auth-link.active {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.15);
+            font-weight: 600;
+        }
+
+        .auth-link.register-btn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .auth-link.register-btn:hover {
+            background: #388E3C;
+            color: white;
+        }
+
+        .auth-link.register-btn.active {
+            background: #388E3C;
+            color: white;
+        }
+
+        /* Desktop Layout */
+        @media (min-width: 769px) {
+            .desktop-nav, .auth-menu {
+                display: flex;
+            }
+            
+            .footer-nav {
+                display: none;
+            }
+            
+            body {
+                padding-bottom: 0;
+                padding-top: 56px;
+            }
+        }
+
+        /* Mobile Layout */
+        @media (max-width: 768px) {
+            .desktop-nav, .auth-menu {
+                display: none;
+            }
+            
+            .top-navbar {
+                height: 48px;
+            }
+            
+            body {
+                padding-top: 48px;
+            }
         }
         
         .header-content {
@@ -248,6 +403,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
             outline: none;
+        }
+        
+        .form-control[readonly] {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+            color: #6c757d;
+        }
+        
+        .text-muted {
+            color: #6c757d !important;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: block;
         }
         
         .btn {
@@ -411,14 +579,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <!-- Header -->
-    <header>
-        <div class="header-content container">
-            <div class="logo">
-                <img src="../assets/images/health-center.jpg" alt="HealthConnect Logo">
-                <h1>HealthConnect</h1>
+    <nav class="top-navbar">
+        <div class="container">
+            <a href="/connect/" class="navbar-brand">
+                <img src="/connect/assets/images/health-center.jpg" alt="HealthConnect">
+                HealthConnect
+            </a>
+            
+            <!-- Desktop Navigation -->
+            <div class="desktop-nav">
+                <nav class="main-nav">
+                    <a href="/connect/index.php#home" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="/connect/index.php#features" class="nav-link">
+                        <i class="fas fa-list-ul"></i>
+                        <span>Features</span>
+                    </a>
+                    <a href="/connect/index.php#about" class="nav-link">
+                        <i class="fas fa-info-circle"></i>
+                        <span>About</span>
+                    </a>
+                    <a href="/connect/index.php#contact" class="nav-link">
+                        <i class="fas fa-envelope"></i>
+                        <span>Contact</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="auth-menu">
+                <a href="/connect/pages/login.php" class="auth-link">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Login</span>
+                </a>
+                <a href="/connect/pages/register.php" class="auth-link register-btn active">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Register</span>
+                </a>
             </div>
         </div>
-    </header>
+    </nav>
     
     <!-- Registration Section -->
     <div class="auth-container">
@@ -441,13 +642,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <h3 class="form-section-title"><i class="fas fa-user"></i> Account Information</h3>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="username">Username</label>
-                        <input type="text" id="username" name="username" class="form-control" placeholder="Choose a username" required>
+                        <label for="username">Username <small>(Auto-generated)</small></label>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="Username will be auto-generated" readonly required>
                     </div>
                     
                     <div class="form-group">
                         <label for="email">Email Address</label>
                         <input type="email" id="email" name="email" class="form-control" placeholder="Your email address" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="Your password" required>
                     </div>
                 </div>
             </div>
@@ -553,5 +761,62 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
     <!-- JavaScript -->
     <script src="../assets/js/app.js"></script>
+    
+    <script>
+        function generateUsername() {
+            const firstName = document.getElementById('first_name').value.trim();
+            const lastName = document.getElementById('last_name').value.trim();
+            const mobileNumber = document.getElementById('mobile_number').value.trim();
+            
+            if (firstName && lastName && mobileNumber) {
+                // Get first letter of first name and last name (convert to lowercase)
+                const firstNameAcronym = firstName.charAt(0).toLowerCase();
+                const lastNameAcronym = lastName.charAt(0).toLowerCase();
+                
+                // Get last 3 digits of mobile number
+                const last3Digits = mobileNumber.replace(/[^0-9]/g, '').slice(-3);
+                
+                if (firstNameAcronym && lastNameAcronym && last3Digits.length === 3) {
+                    // Generate username: first letter of firstname + first letter of lastname + last3digits
+                    const username = firstNameAcronym + lastNameAcronym + last3Digits;
+                    document.getElementById('username').value = username;
+                } else {
+                    document.getElementById('username').value = '';
+                }
+            } else {
+                document.getElementById('username').value = '';
+            }
+        }
+        
+        // Add event listeners to generate username when fields change
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('first_name').addEventListener('input', generateUsername);
+            document.getElementById('last_name').addEventListener('input', generateUsername);
+            document.getElementById('mobile_number').addEventListener('input', generateUsername);
+            
+            // Generate username on page load if fields have values
+            generateUsername();
+        });
+        
+        // Form validation before submission
+        document.querySelector('.auth-form').addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value.trim();
+            const mobileNumber = document.getElementById('mobile_number').value.trim();
+            
+            if (!username) {
+                e.preventDefault();
+                alert('Please fill in your first name, last name, and mobile number to generate a username.');
+                return false;
+            }
+            
+            // Ensure mobile number has at least 3 digits
+            const digits = mobileNumber.replace(/[^0-9]/g, '');
+            if (digits.length < 3) {
+                e.preventDefault();
+                alert('Please enter a valid mobile number with at least 3 digits.');
+                return false;
+            }
+        });
+    </script>
 </body>
 </html> 

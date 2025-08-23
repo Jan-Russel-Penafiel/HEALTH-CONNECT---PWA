@@ -122,6 +122,29 @@ try {
             color: red;
             margin-left: 4px;
         }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            border: none;
+            font-size: 14px;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+            color: white;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
@@ -130,6 +153,9 @@ try {
     <div class="container">
         <div class="dashboard-header">
             <h2>Admin Profile</h2>
+            <div>
+                <a href="change_password.php" class="btn btn-secondary">Change Password</a>
+            </div>
         </div>
 
         <?php if ($success_message): ?>

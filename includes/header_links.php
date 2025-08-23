@@ -65,17 +65,15 @@ if ('serviceWorker' in navigator) {
             .then(registration => {
                 console.log('ServiceWorker registration successful with scope:', registration.scope);
                 
-                // Check for updates
+                // Check for updates (auto-update - no user interaction needed)
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
-                    console.log('Service Worker update found!');
+                    console.log('Service Worker update found - auto-updating!');
                     
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            // New service worker is installed but waiting
-                            if (confirm('New version available! Click OK to update.')) {
-                                window.location.reload();
-                            }
+                            // Auto-update: Skip waiting and activate immediately
+                            newWorker.postMessage({ type: 'SKIP_WAITING' });
                         }
                     });
                 });

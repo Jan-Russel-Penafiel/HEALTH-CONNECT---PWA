@@ -126,6 +126,278 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Immunization Records - HealthConnect</title>
     <?php include __DIR__ . '/../../includes/header_links.php'; ?>
+    <style>
+        /* Desktop Table Layout */
+        @media (min-width: 992px) {
+            .immunization-sections {
+                display: block;
+            }
+            
+            .immunization-grid {
+                display: none;
+            }
+            
+            .immunization-table-container {
+                display: block;
+            }
+            
+            .immunization-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+                background: white;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            
+            .immunization-table th,
+            .immunization-table td {
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }
+            
+            .immunization-table th {
+                background-color: #f8f9fa;
+                font-weight: 600;
+                color: #333;
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
+            .immunization-table tbody tr {
+                transition: all 0.2s ease;
+            }
+            
+            .immunization-table tbody tr:hover {
+                background-color: #f8f9fa;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            
+            .table-patient-name {
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 4px;
+            }
+            
+            .table-patient-info {
+                font-size: 0.85rem;
+                color: #666;
+            }
+            
+            .table-immunization-name {
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 4px;
+            }
+            
+            .table-immunization-desc {
+                font-size: 0.85rem;
+                color: #666;
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            
+            .table-date {
+                font-weight: 500;
+                color: #2c3e50;
+            }
+            
+            .table-next-schedule {
+                font-size: 0.9rem;
+                color: #666;
+            }
+            
+            .table-notes {
+                max-width: 150px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-size: 0.9rem;
+                color: #666;
+            }
+            
+            .table-actions {
+                display: flex;
+                gap: 5px;
+                flex-wrap: wrap;
+            }
+            
+            .table-actions .btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+                display: flex;
+                align-items: center;
+                gap: 0.3rem;
+                white-space: nowrap;
+            }
+        }
+
+        /* Mobile Card Layout */
+        @media (max-width: 991px) {
+            .immunization-sections {
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
+            }
+            
+            .immunization-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 1.5rem;
+                padding: 1rem 0;
+            }
+            
+            .immunization-table-container {
+                display: none;
+            }
+        }
+        
+        .immunization-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .immunization-section h2 {
+            margin: 0 0 1rem 0;
+            color: #2c3e50;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .immunization-section h2 i {
+            color: #3498db;
+        }
+        
+        .immunization-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .immunization-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .immunization-date {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .patient-info h3 {
+            margin: 0 0 0.5rem 0;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .email {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .age {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
+        .age i {
+            color: #e67e22;
+        }
+
+        .immunization-details {
+            margin: 1rem 0;
+        }
+
+        .immunization-type h4 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+
+        .immunization-type .description {
+            margin: 0.5rem 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .next-schedule {
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .notes {
+            margin: 1rem 0;
+        }
+
+        .notes p {
+            margin: 0.5rem 0 0 0;
+            color: #666;
+        }
+
+        .immunization-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .immunization-actions .btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            background: #fff;
+            border-radius: 8px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: #adb5bd;
+            margin-bottom: 1rem;
+        }
+
+        @media (min-width: 1200px) {
+            .immunization-sections {
+                flex-direction: row;
+            }
+
+            .immunization-section {
+                flex: 1;
+            }
+        }
+    </style>
 </head>
 <body>
     <?php include __DIR__ . '/../../includes/navbar.php'; ?>
@@ -173,74 +445,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- Children's Section -->
             <div class="immunization-section">
                 <h2><i class="fas fa-child"></i> Children's Immunizations</h2>
-        <div class="immunization-grid">
+                
+                <!-- Desktop Table Layout -->
+                <div class="immunization-table-container">
                     <?php if (empty($child_immunizations)): ?>
-            <div class="empty-state">
-                <i class="fas fa-syringe"></i>
+                    <div class="empty-state">
+                        <i class="fas fa-syringe"></i>
                         <h3>No Children's Immunization Records Found</h3>
                         <p>There are no immunization records for children matching your search criteria.</p>
-            </div>
-            <?php else: ?>
-                        <?php foreach ($child_immunizations as $record): ?>
-                <div class="immunization-card">
-                    <div class="immunization-date">
-                        <i class="fas fa-calendar"></i>
-                        <span><?php echo date('M d, Y', strtotime($record['date_administered'])); ?></span>
                     </div>
-                    
-                    <div class="patient-info">
-                        <h3><?php echo htmlspecialchars($record['patient_name']); ?></h3>
-                        <div class="email">
-                            <i class="fas fa-envelope"></i>
-                            <?php echo htmlspecialchars($record['patient_email']); ?>
-                        </div>
-                                <div class="age">
-                                    <i class="fas fa-birthday-cake"></i>
-                                    <?php echo htmlspecialchars($record['age']); ?> years old
-                                </div>
-                    </div>
-                    
-                    <div class="immunization-details">
-                        <div class="immunization-type">
-                            <h4><?php echo htmlspecialchars($record['immunization_name']); ?></h4>
-                            <p class="description"><?php echo htmlspecialchars($record['immunization_description']); ?></p>
-                        </div>
-                        
-                        <div class="next-schedule">
-                            <strong><i class="fas fa-clock"></i> Next Schedule:</strong>
-                            <?php if (!empty($record['next_schedule_date'])): ?>
-                                <span class="date"><?php echo date('M d, Y', strtotime($record['next_schedule_date'])); ?></span>
-                            <?php else: ?>
-                                <span class="text-muted">None</span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <?php if (!empty($record['notes'])): ?>
-                        <div class="notes">
-                            <strong><i class="fas fa-sticky-note"></i> Notes:</strong>
-                            <p><?php echo htmlspecialchars($record['notes']); ?></p>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <div class="immunization-actions">
-                        <a href="view_immunization.php?id=<?php echo $record['immunization_record_id']; ?>" class="btn btn-view" title="View Details">
-                            <i class="fas fa-eye"></i> View
-                        </a>
-                        <button class="btn btn-danger" onclick="deleteRecord(<?php echo $record['immunization_record_id']; ?>)" title="Delete Record">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </div>
+                    <?php else: ?>
+                    <table class="immunization-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Patient</th>
+                                <th>Immunization</th>
+                                <th>Next Schedule</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($child_immunizations as $record): ?>
+                            <tr>
+                                <td>
+                                    <div class="table-date">
+                                        <?php echo date('M d, Y', strtotime($record['date_administered'])); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-patient-name">
+                                        <?php echo htmlspecialchars($record['patient_name']); ?>
+                                    </div>
+                                    <div class="table-patient-info">
+                                        <div><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($record['patient_email']); ?></div>
+                                        <div><i class="fas fa-birthday-cake"></i> <?php echo htmlspecialchars($record['age']); ?> years old</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-immunization-name">
+                                        <?php echo htmlspecialchars($record['immunization_name']); ?>
+                                    </div>
+                                    <div class="table-immunization-desc" title="<?php echo htmlspecialchars($record['immunization_description']); ?>">
+                                        <?php echo htmlspecialchars($record['immunization_description']); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-next-schedule">
+                                        <?php if (!empty($record['next_schedule_date'])): ?>
+                                            <?php echo date('M d, Y', strtotime($record['next_schedule_date'])); ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">None</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-notes" title="<?php echo htmlspecialchars($record['notes'] ?? ''); ?>">
+                                        <?php echo htmlspecialchars($record['notes'] ?? 'No notes'); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <a href="view_immunization.php?id=<?php echo $record['immunization_record_id']; ?>" class="btn btn-view" title="View Details">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        <button class="btn btn-danger" onclick="deleteRecord(<?php echo $record['immunization_record_id']; ?>)" title="Delete Record">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    <?php endif; ?>
                 </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </div>
             </div>
 
             <!-- Adults' Section -->
             <div class="immunization-section">
                 <h2><i class="fas fa-user"></i> Adult Immunizations</h2>
-                <div class="immunization-grid">
+                
+                <!-- Desktop Table Layout -->
+                <div class="immunization-table-container">
                     <?php if (empty($adult_immunizations)): ?>
                     <div class="empty-state">
                         <i class="fas fa-syringe"></i>
@@ -248,112 +536,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p>There are no immunization records for adults matching your search criteria.</p>
                     </div>
                     <?php else: ?>
-                        <?php foreach ($adult_immunizations as $record): ?>
-                        <div class="immunization-card">
-                            <div class="immunization-date">
-                                <i class="fas fa-calendar"></i>
-                                <span><?php echo date('M d, Y', strtotime($record['date_administered'])); ?></span>
-                            </div>
-                            
-                            <div class="patient-info">
-                                <h3><?php echo htmlspecialchars($record['patient_name']); ?></h3>
-                                <div class="email">
-                                    <i class="fas fa-envelope"></i>
-                                    <?php echo htmlspecialchars($record['patient_email']); ?>
-                                </div>
-                                <div class="age">
-                                    <i class="fas fa-birthday-cake"></i>
-                                    <?php echo htmlspecialchars($record['age']); ?> years old
-                                </div>
-                            </div>
-                            
-                            <div class="immunization-details">
-                                <div class="immunization-type">
-                                    <h4><?php echo htmlspecialchars($record['immunization_name']); ?></h4>
-                                    <p class="description"><?php echo htmlspecialchars($record['immunization_description']); ?></p>
-                                </div>
-                                
-                                <div class="next-schedule">
-                                    <strong><i class="fas fa-clock"></i> Next Schedule:</strong>
-                                    <?php if (!empty($record['next_schedule_date'])): ?>
-                                        <span class="date"><?php echo date('M d, Y', strtotime($record['next_schedule_date'])); ?></span>
-                                    <?php else: ?>
-                                        <span class="text-muted">None</span>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <?php if (!empty($record['notes'])): ?>
-                                <div class="notes">
-                                    <strong><i class="fas fa-sticky-note"></i> Notes:</strong>
-                                    <p><?php echo htmlspecialchars($record['notes']); ?></p>
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <div class="immunization-actions">
-                                <a href="view_immunization.php?id=<?php echo $record['immunization_record_id']; ?>" class="btn btn-view" title="View Details">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
-                                <button class="btn btn-danger" onclick="deleteRecord(<?php echo $record['immunization_record_id']; ?>)" title="Delete Record">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
+                    <table class="immunization-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Patient</th>
+                                <th>Immunization</th>
+                                <th>Next Schedule</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($adult_immunizations as $record): ?>
+                            <tr>
+                                <td>
+                                    <div class="table-date">
+                                        <?php echo date('M d, Y', strtotime($record['date_administered'])); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-patient-name">
+                                        <?php echo htmlspecialchars($record['patient_name']); ?>
+                                    </div>
+                                    <div class="table-patient-info">
+                                        <div><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($record['patient_email']); ?></div>
+                                        <div><i class="fas fa-birthday-cake"></i> <?php echo htmlspecialchars($record['age']); ?> years old</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-immunization-name">
+                                        <?php echo htmlspecialchars($record['immunization_name']); ?>
+                                    </div>
+                                    <div class="table-immunization-desc" title="<?php echo htmlspecialchars($record['immunization_description']); ?>">
+                                        <?php echo htmlspecialchars($record['immunization_description']); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-next-schedule">
+                                        <?php if (!empty($record['next_schedule_date'])): ?>
+                                            <?php echo date('M d, Y', strtotime($record['next_schedule_date'])); ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">None</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-notes" title="<?php echo htmlspecialchars($record['notes'] ?? ''); ?>">
+                                        <?php echo htmlspecialchars($record['notes'] ?? 'No notes'); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <a href="view_immunization.php?id=<?php echo $record['immunization_record_id']; ?>" class="btn btn-view" title="View Details">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        <button class="btn btn-danger" onclick="deleteRecord(<?php echo $record['immunization_record_id']; ?>)" title="Delete Record">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                     <?php endif; ?>
                 </div>
             </div>
         </div>
-
-        <style>
-        .immunization-sections {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        .immunization-section {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 1.5rem;
-        }
-
-        .immunization-section h2 {
-            margin: 0 0 1rem 0;
-            color: #2c3e50;
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .immunization-section h2 i {
-            color: #3498db;
-        }
-
-        .age {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-            color: #666;
-            margin-top: 0.5rem;
-        }
-
-        .age i {
-            color: #e67e22;
-        }
-
-        @media (min-width: 1200px) {
-            .immunization-sections {
-                flex-direction: row;
-            }
-
-            .immunization-section {
-                flex: 1;
-            }
-        }
-        </style>
     </div>
 
     <!-- Add Immunization Modal -->

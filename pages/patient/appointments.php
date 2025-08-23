@@ -129,6 +129,69 @@ foreach ($appointments as $appointment) {
             margin: 1rem 0;
         }
         
+        /* Table styles for desktop */
+        .appointments-table {
+            display: none;
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .appointments-table th,
+        .appointments-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .appointments-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .appointments-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .appointments-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        /* Desktop view - show table, hide cards */
+        @media (min-width: 992px) {
+            .appointments-grid {
+                display: none;
+            }
+            
+            .appointments-table {
+                display: table;
+            }
+        }
+        
+        /* Mobile view - show cards, hide table */
+        @media (max-width: 991px) {
+            .appointments-grid {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+            
+            .appointments-table {
+                display: none;
+            }
+        }
+        
         .appointment-card {
             background: #fff;
             border-radius: 8px;
@@ -349,6 +412,70 @@ foreach ($appointments as $appointment) {
             </div>
             
             <?php if (count($upcoming) > 0): ?>
+                <!-- Desktop Table View -->
+                <table class="appointments-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Health Worker</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($upcoming as $appointment): ?>
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600; color: #2c3e50;">
+                                        <?php echo date('M j, Y', strtotime($appointment['appointment_date'])); ?>
+                                    </div>
+                                    <div style="color: #7f8c8d; font-size: 0.9rem;">
+                                        <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; color: #2c3e50;">
+                                        <?php echo htmlspecialchars($appointment['health_worker_name']); ?>
+                                    </div>
+                                    <div style="color: #7f8c8d; font-size: 0.9rem;">
+                                        <?php echo htmlspecialchars($appointment['health_worker_position']); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <?php echo !empty($appointment['reason']) ? htmlspecialchars($appointment['reason']) : 'Not specified'; ?>
+                                </td>
+                                <td>
+                                    <span class="status <?php echo strtolower($appointment['status_name']); ?>">
+                                        <?php echo htmlspecialchars($appointment['status_name']); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <?php if ($appointment['status_id'] == 2): ?>
+                                            <a href="generate_slip.php?appointment_id=<?php echo $appointment['appointment_id']; ?>" 
+                                               target="_blank" 
+                                               class="btn-print" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (in_array($appointment['status_id'], [1, 2])): ?>
+                                            <form method="POST" style="margin: 0;" onsubmit="return confirm('Are you sure you want to cancel this appointment?');">
+                                                <input type="hidden" name="appointment_id" value="<?php echo $appointment['appointment_id']; ?>">
+                                                <button type="submit" name="cancel_appointment" class="btn-danger" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                
+                <!-- Mobile Card View -->
                 <div class="appointments-grid">
                     <?php foreach ($upcoming as $appointment): ?>
                         <div class="appointment-card" data-appointment-id="<?php echo $appointment['appointment_id']; ?>">
@@ -380,7 +507,7 @@ foreach ($appointments as $appointment) {
                             </div>
                             
                             <div class="card-actions">
-                                <?php if ($appointment['status_id'] == 2): // Confirmed appointments ?>
+                                <?php if ($appointment['status_id'] == 2): ?>
                                     <a href="generate_slip.php?appointment_id=<?php echo $appointment['appointment_id']; ?>" 
                                        target="_blank" 
                                        class="btn-print">
@@ -404,7 +531,6 @@ foreach ($appointments as $appointment) {
                 <div class="no-data">
                     <i class="fas fa-calendar-alt"></i>
                     <p>No upcoming appointments</p>
-                    <a href="schedule_appointment.php" class="btn">Schedule Now</a>
                 </div>
             <?php endif; ?>
         </div>
@@ -416,6 +542,49 @@ foreach ($appointments as $appointment) {
             </div>
             
             <?php if (count($past) > 0): ?>
+                <!-- Desktop Table View -->
+                <table class="appointments-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Health Worker</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($past as $appointment): ?>
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600; color: #2c3e50;">
+                                        <?php echo date('M j, Y', strtotime($appointment['appointment_date'])); ?>
+                                    </div>
+                                    <div style="color: #7f8c8d; font-size: 0.9rem;">
+                                        <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; color: #2c3e50;">
+                                        <?php echo htmlspecialchars($appointment['health_worker_name']); ?>
+                                    </div>
+                                    <div style="color: #7f8c8d; font-size: 0.9rem;">
+                                        <?php echo htmlspecialchars($appointment['health_worker_position']); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <?php echo !empty($appointment['reason']) ? htmlspecialchars($appointment['reason']) : 'Not specified'; ?>
+                                </td>
+                                <td>
+                                    <span class="status <?php echo strtolower($appointment['status_name']); ?>">
+                                        <?php echo htmlspecialchars($appointment['status_name']); ?>
+                                    </span>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                
+                <!-- Mobile Card View -->
                 <div class="appointments-grid">
                     <?php foreach ($past as $appointment): ?>
                         <div class="appointment-card">
@@ -463,6 +632,49 @@ foreach ($appointments as $appointment) {
             </div>
             
             <?php if (count($cancelled) > 0): ?>
+                <!-- Desktop Table View -->
+                <table class="appointments-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Health Worker</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($cancelled as $appointment): ?>
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600; color: #2c3e50;">
+                                        <?php echo date('M j, Y', strtotime($appointment['appointment_date'])); ?>
+                                    </div>
+                                    <div style="color: #7f8c8d; font-size: 0.9rem;">
+                                        <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; color: #2c3e50;">
+                                        <?php echo htmlspecialchars($appointment['health_worker_name']); ?>
+                                    </div>
+                                    <div style="color: #7f8c8d; font-size: 0.9rem;">
+                                        <?php echo htmlspecialchars($appointment['health_worker_position']); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <?php echo !empty($appointment['reason']) ? htmlspecialchars($appointment['reason']) : 'Not specified'; ?>
+                                </td>
+                                <td>
+                                    <span class="status <?php echo strtolower($appointment['status_name']); ?>">
+                                        <?php echo htmlspecialchars($appointment['status_name']); ?>
+                                    </span>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                
+                <!-- Mobile Card View -->
                 <div class="appointments-grid">
                     <?php foreach ($cancelled as $appointment): ?>
                         <div class="appointment-card">

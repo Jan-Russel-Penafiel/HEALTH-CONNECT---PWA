@@ -92,6 +92,69 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Immunization Record - HealthConnect</title>
     <?php include __DIR__ . '/../../includes/header_links.php'; ?>
+    <style>
+        .send-reminder-btn {
+            background-color: #007bff;
+            border: none;
+            color: white !important;
+        }
+        
+        .send-reminder-btn i {
+            color: white !important;
+        }
+        
+        .send-reminder-btn:hover {
+            background-color: #0056b3;
+            color: white !important;
+        }
+        
+        .send-reminder-btn:hover i {
+            color: white !important;
+        }
+        
+        .send-reminder-btn:disabled {
+            background-color: #6c757d;
+            color: white !important;
+            opacity: 0.6;
+        }
+        
+        .send-reminder-btn:disabled i {
+            color: white !important;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            max-width: 400px;
+            word-wrap: break-word;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast-success {
+            background: #28a745;
+        }
+
+        .toast-error {
+            background: #dc3545;
+        }
+
+        .toast-info {
+            background: #17a2b8;
+        }
+    </style>
 </head>
 <body>
     <?php include __DIR__ . '/../../includes/navbar.php'; ?>
@@ -252,6 +315,7 @@ try {
     <script>
         function sendReminder(patientId, immunizationType, scheduleDate) {
             const btn = document.querySelector('.send-reminder-btn');
+            const originalContent = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
             btn.disabled = true;
             
@@ -262,52 +326,72 @@ try {
                 day: 'numeric'
             });
             
-            // Use the existing SMS functionality or email system
-            fetch('../api/send_reminder.php', {
+            // Create the reminder message
+            const message = `Reminder: Your next ${immunizationType} immunization is scheduled for ${formattedDate}. Please contact HealthConnect to confirm your appointment.`;
+            
+            // Use the immunization-specific reminder API
+            fetch('../../api/immunizations/send_reminder.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     patient_id: patientId,
-                    message: `Reminder: Your next ${immunizationType} immunization is scheduled for ${formattedDate}. Please contact the health center to confirm your appointment.`,
-                    type: 'immunization_reminder'
+                    message: message,
+                    type: 'immunization_reminder',
+                    immunization_type: immunizationType,
+                    schedule_date: scheduleDate
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
-                    showToast('Reminder sent successfully!', 'success');
+                    showToast(data.message, 'success');
                 } else {
-                    showToast('Failed to send reminder: ' + data.message, 'error');
+                    showToast('Failed to send reminder: ' + (data.message || 'Unknown error'), 'error');
                 }
             })
             .catch(error => {
-                showToast('Error sending reminder', 'error');
                 console.error('Error:', error);
+                showToast('Error sending reminder. Please check your internet connection and try again.', 'error');
             })
             .finally(() => {
-                btn.innerHTML = '<i class="fas fa-bell"></i> Send Reminder';
+                btn.innerHTML = originalContent;
                 btn.disabled = false;
             });
         }
         
         function showToast(message, type = 'info') {
+            // Remove any existing toasts
+            const existingToasts = document.querySelectorAll('.toast');
+            existingToasts.forEach(toast => {
+                toast.remove();
+            });
+            
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
             toast.innerHTML = message;
             document.body.appendChild(toast);
             
+            // Show toast
             setTimeout(() => {
                 toast.classList.add('show');
             }, 100);
             
+            // Hide toast after 5 seconds
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => {
-                    document.body.removeChild(toast);
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
                 }, 300);
-            }, 3000);
+            }, 5000);
         }
     </script>
 </body>

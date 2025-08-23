@@ -24,7 +24,6 @@ $today = date('Y-m-d');
 
 // Initialize variables with default values
 $today_appointments = [];
-$upcoming_appointments = [];
 $total_patients = 0;
 $total_appointments = 0;
 
@@ -55,16 +54,6 @@ try {
     $stmt->execute([$health_worker_id, $today]);
     $today_count = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
-    // Get upcoming appointments count (next 7 days)
-    $query = "SELECT COUNT(*) as count 
-              FROM appointments 
-              WHERE health_worker_id = ? 
-              AND DATE(appointment_date) > ? 
-              AND DATE(appointment_date) <= DATE_ADD(?, INTERVAL 7 DAY)";
-    $stmt = $pdo->prepare($query);
-    $stmt->execute([$health_worker_id, $today, $today]);
-    $upcoming_count = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-
     // Get today's appointments details
     $query = "SELECT 
                 a.appointment_id,
@@ -85,28 +74,6 @@ try {
     $stmt = $pdo->prepare($query);
     $stmt->execute([$health_worker_id, $today]);
     $today_appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Get upcoming appointments details
-    $query = "SELECT 
-                a.appointment_id,
-                a.appointment_date,
-                u.first_name,
-                u.middle_name,
-                u.last_name,
-                u.mobile_number as patient_phone,
-                s.status_name,
-                s.status_id
-              FROM appointments a 
-              JOIN patients p ON a.patient_id = p.patient_id
-              JOIN users u ON p.user_id = u.user_id
-              JOIN appointment_status s ON a.status_id = s.status_id
-              WHERE a.health_worker_id = ? 
-              AND DATE(a.appointment_date) > ? 
-              AND DATE(a.appointment_date) <= DATE_ADD(?, INTERVAL 7 DAY)
-              ORDER BY a.appointment_date ASC";
-    $stmt = $pdo->prepare($query);
-    $stmt->execute([$health_worker_id, $today, $today]);
-    $upcoming_appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     error_log("Error fetching dashboard data: " . $e->getMessage());
@@ -149,12 +116,6 @@ try {
                 <i class="fas fa-calendar-day"></i>
                 <h3>Today's Appointments</h3>
                 <p class="number"><?php echo number_format($today_count); ?></p>
-            </div>
-            
-            <div class="stat-card">
-                <i class="fas fa-clock"></i>
-                <h3>Upcoming Appointments</h3>
-                <p class="number"><?php echo number_format($upcoming_count); ?></p>
             </div>
         </div>
 
@@ -205,57 +166,6 @@ try {
                                             <i class="fas fa-times"></i>
                                         </button>
                                         <?php endif; ?>
-                                    </div>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-        </div>
-
-        <div class="recent-activity">
-            <h2>Upcoming Appointments</h2>
-            <?php if (empty($upcoming_appointments)): ?>
-                <div class="no-activity">
-                    <p>No upcoming appointments scheduled.</p>
-                </div>
-            <?php else: ?>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Patient</th>
-                                <th>Phone</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($upcoming_appointments as $appointment): ?>
-                            <tr>
-                                <td><?php echo date('M d, Y', strtotime($appointment['appointment_date'])); ?></td>
-                                <td><?php echo date('H:i', strtotime($appointment['appointment_date'])); ?></td>
-                                <td><?php 
-                                    $fullName = trim($appointment['first_name'] . ' ' . 
-                                               ($appointment['middle_name'] ? $appointment['middle_name'] . ' ' : '') . 
-                                               $appointment['last_name']);
-                                    echo htmlspecialchars($fullName); 
-                                ?></td>
-                                <td><?php echo htmlspecialchars($appointment['patient_phone']); ?></td>
-                                <td>
-                                    <span class="status-badge <?php echo strtolower($appointment['status_name']); ?>">
-                                        <?php echo ucfirst($appointment['status_name']); ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <a href="view_appointment.php?id=<?php echo $appointment['appointment_id']; ?>" class="btn-action btn-view">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
                                     </div>
                                 </td>
                             </tr>

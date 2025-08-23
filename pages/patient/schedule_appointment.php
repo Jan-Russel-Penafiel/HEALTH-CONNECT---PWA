@@ -32,20 +32,6 @@ try {
     exit();
 }
 
-// Get available health workers
-try {
-    $query = "SELECT hw.health_worker_id, u.first_name, u.last_name, hw.position, hw.specialty
-              FROM health_workers hw
-              JOIN users u ON hw.user_id = u.user_id
-              WHERE u.is_active = 1
-              ORDER BY u.last_name, u.first_name";
-    $stmt = $pdo->query($query);
-    $health_workers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    error_log("Error fetching health workers: " . $e->getMessage());
-    $health_workers = [];
-}
-
 // Get working hours settings
 $working_hours = [
     'start' => '09:00',
@@ -73,55 +59,68 @@ try {
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $health_worker_id = $_POST['health_worker_id'] ?? null;
     $appointment_date = $_POST['appointment_date'] ?? null;
     $appointment_time = $_POST['appointment_time'] ?? null;
     $reason = $_POST['reason'] ?? '';
     $notes = $_POST['notes'] ?? '';
     
     // Validate required fields
-    if (!$health_worker_id || !$appointment_date || !$appointment_time) {
+    if (!$appointment_date || !$appointment_time) {
         $error = "Please fill in all required fields.";
     } else {
         try {
-            // Get the status_id for 'Scheduled'
-            $query = "SELECT status_id FROM appointment_status WHERE status_name = 'Scheduled'";
+            // Get the first available health worker as default
+            $query = "SELECT hw.health_worker_id 
+                      FROM health_workers hw
+                      JOIN users u ON hw.user_id = u.user_id
+                      WHERE u.is_active = 1
+                      ORDER BY hw.health_worker_id ASC
+                      LIMIT 1";
             $stmt = $pdo->query($query);
-            $status_id = $stmt->fetchColumn();
+            $health_worker_id = $stmt->fetchColumn();
             
-            if (!$status_id) {
-                $status_id = 1; // Default to 1 if not found
-            }
-            
-            // Insert the appointment
-            $query = "INSERT INTO appointments (patient_id, health_worker_id, appointment_date, appointment_time, status_id, reason, notes) 
-                      VALUES (?, ?, ?, ?, ?, ?, ?)";
-            $stmt = $pdo->prepare($query);
-            $result = $stmt->execute([
-                $patient['patient_id'],
-                $health_worker_id,
-                $appointment_date,
-                $appointment_time,
-                $status_id,
-                $reason,
-                $notes
-            ]);
-            
-            if ($result) {
-                // Send SMS notification if enabled
-                if (isset($settings['enable_sms_notifications']) && $settings['enable_sms_notifications'] === '1') {
-                    require_once '../../includes/sms.php';
-                    $message = "Your appointment at Brgy. Poblacion Health Center has been scheduled for " . 
-                               date('F j, Y', strtotime($appointment_date)) . " at " . 
-                               date('g:i A', strtotime($appointment_time)) . ". Thank you!";
-                    sendSMS($patient['mobile_number'], $message);
+            if (!$health_worker_id) {
+                $error = "No health workers available. Please contact the administrator.";
+            } else {
+                // Get the status_id for 'Scheduled'
+                $query = "SELECT status_id FROM appointment_status WHERE status_name = 'Scheduled'";
+                $stmt = $pdo->query($query);
+                $status_id = $stmt->fetchColumn();
+                
+                if (!$status_id) {
+                    $status_id = 1; // Default to 1 if not found
                 }
                 
-                // Redirect to appointments page
-                header("Location: appointments.php?success=1");
-                exit;
-            } else {
-                $error = "Failed to schedule appointment. Please try again.";
+                // Insert the appointment
+                $query = "INSERT INTO appointments (patient_id, health_worker_id, appointment_date, appointment_time, status_id, reason, notes) 
+                          VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $stmt = $pdo->prepare($query);
+                $result = $stmt->execute([
+                    $patient['patient_id'],
+                    $health_worker_id,
+                    $appointment_date,
+                    $appointment_time,
+                    $status_id,
+                    $reason,
+                    $notes
+                ]);
+                
+                if ($result) {
+                    // Send SMS notification if enabled
+                    if (isset($settings['enable_sms_notifications']) && $settings['enable_sms_notifications'] === '1') {
+                        require_once '../../includes/sms.php';
+                        $message = "Your appointment at Brgy. Poblacion Health Center has been scheduled for " . 
+                                   date('F j, Y', strtotime($appointment_date)) . " at " . 
+                                   date('g:i A', strtotime($appointment_time)) . ". Thank you!";
+                        sendSMS($patient['mobile_number'], $message);
+                    }
+                    
+                    // Redirect to appointments page
+                    header("Location: appointments.php?success=1");
+                    exit;
+                } else {
+                    $error = "Failed to schedule appointment. Please try again.";
+                }
             }
         } catch (PDOException $e) {
             error_log("Error scheduling appointment: " . $e->getMessage());
@@ -297,18 +296,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="card-body">
                 <form method="POST" action="">
                     <div class="form-row">
-                        <div class="form-group">
-                            <label for="health_worker_id" class="required">Select Health Worker</label>
-                            <select class="form-control" id="health_worker_id" name="health_worker_id" required>
-                                <option value="">Select Health Worker</option>
-                                <?php foreach ($health_workers as $worker): ?>
-                                    <option value="<?php echo $worker['health_worker_id']; ?>">
-                                        <?php echo htmlspecialchars($worker['last_name'] . ', ' . $worker['first_name'] . ' (' . $worker['position'] . ')'); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
                         <div class="form-group">
                             <label for="appointment_date" class="required">Date</label>
                             <input type="date" class="form-control" id="appointment_date" name="appointment_date" required
