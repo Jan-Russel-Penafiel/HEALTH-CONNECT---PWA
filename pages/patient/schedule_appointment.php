@@ -321,7 +321,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div class="form-group">
-                        <label for="reason">Reason for Visit</label>
+                        <label for="reason">Reason for Appointment</label>
                         <input type="text" class="form-control" id="reason" name="reason" placeholder="Brief reason for the appointment">
                     </div>
 

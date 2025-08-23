@@ -466,7 +466,7 @@ function validateForm(formId) {
     return isValid;
 }
 
-// Show alert message with toast notifications
+// Show alert message with simple browser alert
 function showAlert(message, type = 'info', isPersistent = false) {
     // Skip showing any update, install, or version-related alerts
     if (message.includes('update') || message.includes('Update') || 
@@ -480,64 +480,8 @@ function showAlert(message, type = 'info', isPersistent = false) {
         return;
     }
     
-    // Check if toast container exists, if not create it
-    let toastContainer = document.querySelector('.toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.className = 'toast-container';
-        document.body.appendChild(toastContainer);
-    }
-    
-    // Create toast element
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    
-    // Create toast icon based on type
-    const iconClass = type === 'success' ? 'fa-check-circle' :
-                     type === 'error' ? 'fa-times-circle' :
-                     type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
-    
-    // Create simple toast content without update buttons
-    toast.innerHTML = `
-        <div class="toast-icon">
-            <i class="fas ${iconClass}"></i>
-        </div>
-        <div class="toast-content">
-            ${message}
-        </div>
-        <div class="toast-close">
-            <i class="fas fa-times"></i>
-        </div>
-    `;
-    
-    // Add to container
-    toastContainer.appendChild(toast);
-    
-    // Add close functionality
-    const closeBtn = toast.querySelector('.toast-close');
-    closeBtn.addEventListener('click', function() {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            toast.remove();
-        }, 300);
-    });
-    
-    // Show the toast with animation
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 10);
-    
-    // Auto-dismiss after 5 seconds for non-persistent toasts
-    if (!isPersistent) {
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.classList.remove('show');
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
-            }
-        }, 5000);
-    }
+    // Use simple browser alert instead of toast notifications
+    alert(message);
 }
 
 // Format date

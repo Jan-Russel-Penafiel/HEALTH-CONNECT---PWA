@@ -962,6 +962,155 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             opacity: 0.5;
             pointer-events: none;
         }
+        
+        /* Role Selection Modal */
+        .role-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+
+        .role-modal.show {
+            display: flex;
+        }
+
+        .role-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 350px;
+            width: 100%;
+            position: relative;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .role-modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .role-modal-header h2 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .role-modal-header p {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .role-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.2s;
+        }
+
+        .role-close:hover {
+            color: #333;
+        }
+
+        .role-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .role-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .role-card:hover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.05);
+            transform: translateY(-2px);
+            color: #333;
+            text-decoration: none;
+        }
+
+        .role-card i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+
+        .role-card h3 {
+            margin-bottom: 5px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .role-card p {
+            font-size: 0.75rem;
+            color: #666;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .role-card.admin i {
+            color: #FF5722;
+        }
+
+        .role-card.admin:hover {
+            border-color: #FF5722;
+            background: rgba(255, 87, 34, 0.05);
+        }
+
+        .role-card.health-worker i {
+            color: #2196F3;
+        }
+
+        .role-card.health-worker:hover {
+            border-color: #2196F3;
+            background: rgba(33, 150, 243, 0.05);
+        }
+
+        @media (max-width: 768px) {
+            .role-modal-content {
+                padding: 20px 15px;
+                margin: 0 15px;
+            }
+
+            .role-modal-header h2 {
+                font-size: 1.2rem;
+            }
+
+            .role-modal-header p {
+                font-size: 0.8rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -996,7 +1145,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
             
             <div class="auth-menu">
-                <a href="/connect/pages/login.php" class="auth-link active">
+                <a href="#" class="auth-link active" onclick="showRoleSelection()">
                     <i class="fas fa-sign-in-alt"></i>
                     <span>Login</span>
                 </a>
@@ -1179,6 +1328,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
     </div>
     
+    <!-- Role Selection Modal -->
+    <div class="role-modal" id="roleModal">
+        <div class="role-modal-content">
+            <span class="role-close" onclick="hideRoleSelection()">&times;</span>
+            <div class="role-modal-header">
+                <h2>Select Your Role</h2>
+                <p>Choose how you want to access HealthConnect</p>
+            </div>
+            <div class="role-grid">
+                <a href="login.php?role=admin" class="role-card admin">
+                    <i class="fas fa-user-shield"></i>
+                    <h3>Administrator</h3>
+                    <p>Manage the health center system, users, and reports</p>
+                </a>
+                <a href="login.php?role=health_worker" class="role-card health-worker">
+                    <i class="fas fa-user-md"></i>
+                    <h3>Health Worker</h3>
+                    <p>Manage appointments, patient records, and immunizations</p>
+                </a>
+                <a href="login.php?role=patient" class="role-card patient">
+                    <i class="fas fa-user"></i>
+                    <h3>Patient</h3>
+                    <p>Book appointments, view medical records, and track health</p>
+                </a>
+            </div>
+        </div>
+    </div>
   
     
     <!-- Footer Navigation -->
@@ -1350,6 +1526,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             url = url.replace(/[?&]forgot=1/, '');
             window.location.href = url;
         }
+        
+        // Role Selection Modal Functions
+        function showRoleSelection() {
+            document.getElementById('roleModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideRoleSelection() {
+            document.getElementById('roleModal').classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('roleModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideRoleSelection();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideRoleSelection();
+            }
+        });
     </script>
 </body>
 </html> 

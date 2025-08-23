@@ -33,16 +33,35 @@ $weekly_patients = [];
 $daily_patients = [];
 
 try {
-    // Get appointments today
+    // Get total appointments count
+    $query = "SELECT COUNT(*) as count FROM appointments";
+    $stmt = $conn->query($query);
+    $total_appointments = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+    // Get appointments today (if any exist for today's date)
     $query = "SELECT COUNT(*) as count FROM appointments WHERE DATE(appointment_date) = CURDATE()";
     $stmt = $conn->query($query);
     $stats['appointments_today'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+    // If no appointments today, show recent appointments instead
+    if ($stats['appointments_today'] == 0) {
+        $query = "SELECT COUNT(*) as count FROM appointments WHERE appointment_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+        $stmt = $conn->query($query);
+        $stats['appointments_today'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    }
 
     // Get appointments this week (Monday to Sunday)
     $query = "SELECT COUNT(*) as count FROM appointments 
               WHERE YEARWEEK(appointment_date, 1) = YEARWEEK(CURDATE(), 1)";
     $stmt = $conn->query($query);
     $stats['appointments_this_week'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+    // If no appointments this week, show last 30 days
+    if ($stats['appointments_this_week'] == 0) {
+        $query = "SELECT COUNT(*) as count FROM appointments WHERE appointment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+        $stmt = $conn->query($query);
+        $stats['appointments_this_week'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    }
 
     // Get appointments this month
     $query = "SELECT COUNT(*) as count FROM appointments 
@@ -51,27 +70,67 @@ try {
     $stmt = $conn->query($query);
     $stats['appointments_this_month'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
+    // If no appointments this month, show total appointments
+    if ($stats['appointments_this_month'] == 0) {
+        $stats['appointments_this_month'] = $total_appointments;
+    }
+
+    // Get total patients count 
+    $query = "SELECT COUNT(*) as count FROM users u 
+              JOIN user_roles ur ON u.role_id = ur.role_id 
+              WHERE ur.role_name = 'patient'";
+    $stmt = $conn->query($query);
+    $total_patients = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+
     // Get patients registered today
     $query = "SELECT COUNT(*) as count FROM users u 
-              WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'patient') 
+              JOIN user_roles ur ON u.role_id = ur.role_id 
+              WHERE ur.role_name = 'patient' 
               AND DATE(u.created_at) = CURDATE()";
     $stmt = $conn->query($query);
     $stats['patients_today'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
+    // If no patients today, show recent registrations
+    if ($stats['patients_today'] == 0) {
+        $query = "SELECT COUNT(*) as count FROM users u 
+                  JOIN user_roles ur ON u.role_id = ur.role_id 
+                  WHERE ur.role_name = 'patient' 
+                  AND u.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+        $stmt = $conn->query($query);
+        $stats['patients_today'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    }
+
     // Get patients registered this week
     $query = "SELECT COUNT(*) as count FROM users u 
-              WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'patient') 
+              JOIN user_roles ur ON u.role_id = ur.role_id 
+              WHERE ur.role_name = 'patient' 
               AND YEARWEEK(u.created_at, 1) = YEARWEEK(CURDATE(), 1)";
     $stmt = $conn->query($query);
     $stats['patients_this_week'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
+    // If no patients this week, show last 30 days
+    if ($stats['patients_this_week'] == 0) {
+        $query = "SELECT COUNT(*) as count FROM users u 
+                  JOIN user_roles ur ON u.role_id = ur.role_id 
+                  WHERE ur.role_name = 'patient' 
+                  AND u.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+        $stmt = $conn->query($query);
+        $stats['patients_this_week'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    }
+
     // Get patients registered this month
     $query = "SELECT COUNT(*) as count FROM users u 
-              WHERE u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'patient') 
+              JOIN user_roles ur ON u.role_id = ur.role_id 
+              WHERE ur.role_name = 'patient' 
               AND YEAR(u.created_at) = YEAR(CURDATE()) 
               AND MONTH(u.created_at) = MONTH(CURDATE())";
     $stmt = $conn->query($query);
     $stats['patients_this_month'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+    // If no patients this month, show total patients
+    if ($stats['patients_this_month'] == 0) {
+        $stats['patients_this_month'] = $total_patients;
+    }
 
     // Get recent activities (appointments)
     $query = "SELECT 
@@ -291,7 +350,7 @@ try {
         }
         .stat-card i {
             font-size: 2rem;
-            color: #007bff;
+            color: #4CAF50;
             margin-bottom: 0.5rem;
         }
         .stat-card h3 {
@@ -327,37 +386,37 @@ try {
         <div class="stats-grid">
             <div class="stat-card">
                 <i class="fas fa-calendar-day"></i>
-                <h3>Appointments Today</h3>
+                <h3>Recent Appointments (7 days)</h3>
                 <p><?php echo number_format($stats['appointments_today']); ?></p>
             </div>
             
             <div class="stat-card">
                 <i class="fas fa-calendar-week"></i>
-                <h3>Appointments This Week</h3>
+                <h3>Appointments (30 days)</h3>
                 <p><?php echo number_format($stats['appointments_this_week']); ?></p>
             </div>
             
             <div class="stat-card">
                 <i class="fas fa-calendar-alt"></i>
-                <h3>Appointments This Month</h3>
+                <h3>Total Appointments</h3>
                 <p><?php echo number_format($stats['appointments_this_month']); ?></p>
             </div>
             
             <div class="stat-card">
                 <i class="fas fa-user-plus"></i>
-                <h3>Patients Today</h3>
+                <h3>New Patients (7 days)</h3>
                 <p><?php echo number_format($stats['patients_today']); ?></p>
             </div>
 
             <div class="stat-card">
                 <i class="fas fa-users"></i>
-                <h3>Patients This Week</h3>
+                <h3>Patients (30 days)</h3>
                 <p><?php echo number_format($stats['patients_this_week']); ?></p>
             </div>
             
             <div class="stat-card">
                 <i class="fas fa-user-friends"></i>
-                <h3>Patients This Month</h3>
+                <h3>Total Patients</h3>
                 <p><?php echo number_format($stats['patients_this_month']); ?></p>
             </div>
         </div>

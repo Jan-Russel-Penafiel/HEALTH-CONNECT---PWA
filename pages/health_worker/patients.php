@@ -66,15 +66,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $role_id = $stmt->fetchColumn();
 
                     // Insert into users table
-                    $stmt = $conn->prepare("INSERT INTO users (role_id, username, email, mobile_number, first_name, middle_name, 
+                    $stmt = $conn->prepare("INSERT INTO users (role_id, username, email, password, mobile_number, first_name, middle_name, 
                                         last_name, gender, date_of_birth, address) 
-                                        VALUES (:role_id, :username, :email, :mobile_number, :first_name, :middle_name, 
+                                        VALUES (:role_id, :username, :email, :password, :mobile_number, :first_name, :middle_name, 
                                         :last_name, :gender, :date_of_birth, :address)");
                     
                     $stmt->execute([
                         ':role_id' => $role_id,
-                        ':username' => $_POST['email'], // Using email as username
+                        ':username' => $_POST['username'],
                         ':email' => $_POST['email'],
+                        ':password' => $_POST['password'],
                         ':mobile_number' => $_POST['mobile_number'],
                         ':first_name' => $_POST['first_name'],
                         ':middle_name' => $_POST['middle_name'],
@@ -1036,7 +1037,7 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
     <!-- Add Patient Modal -->
-    <div id="addPatientModal" class="modal">
+    <div id="addPatientModal" class="modal" tabindex="-1" role="dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title"><i class="fas fa-user-plus"></i> Add New Patient</h3>
@@ -1112,14 +1113,24 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
 
                         <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" name="username" class="form-control" required placeholder="Username">
+                        </div>
+
+                        <div class="form-group">
                             <label for="password">Password</label>
                             <input type="password" id="password" name="password" class="form-control" required placeholder="Password">
                         </div>
-
+                    </div>
+                    
+                    <div class="form-grid">
                         <div class="form-group">
                             <label for="mobile_number">Mobile Number</label>
                             <input type="tel" id="mobile_number" name="mobile_number" class="form-control" required placeholder="Phone number">
                         </div>
+                        
+                        <div class="form-group"></div>
+                        <div class="form-group"></div>
                     </div>
                     
                     <div class="form-grid">
@@ -1168,12 +1179,8 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" onclick="closeModal('addPatientModal')">
-                        <i class="fas fa-times fa-sm"></i> Cancel
-                    </button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-user-plus fa-sm"></i> Add Patient
-                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addPatientModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Patient</button>
                 </div>
             </form>
         </div>
@@ -1214,8 +1221,16 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Form validation
         document.getElementById('addPatientForm').addEventListener('submit', function(e) {
             const email = document.getElementById('email').value;
+            const username = document.getElementById('username').value;
             const mobile = document.getElementById('mobile_number').value;
             const emergencyMobile = document.getElementById('emergency_contact_number').value;
+
+            // Username validation
+            if (username.length < 3) {
+                e.preventDefault();
+                alert('Username must be at least 3 characters long');
+                return;
+            }
 
             // Basic email validation
             if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {

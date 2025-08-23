@@ -144,7 +144,7 @@ try {
             flex: 1;
             overflow-y: auto;
             scrollbar-width: thin;
-            scrollbar-color: #4a90e2 #f0f0f0;
+            scrollbar-color: #4CAF50 #f0f0f0;
         }
 
         .activity-list-container::-webkit-scrollbar {
@@ -157,7 +157,7 @@ try {
         }
 
         .activity-list-container::-webkit-scrollbar-thumb {
-            background-color: #4a90e2;
+            background-color: #4CAF50;
             border-radius: 3px;
         }
 
@@ -175,7 +175,7 @@ try {
         .view-all-btn {
             padding: 6px 12px;
             background: #f8f9fa;
-            color: #4a90e2;
+            color: #4CAF50;
             border-radius: 5px;
             font-size: 0.9em;
             text-decoration: none;
@@ -186,8 +186,8 @@ try {
         }
 
         .view-all-btn:hover {
-            background: #e3f2fd;
-            color: #1976d2;
+            background: #C8E6C9;
+            color: #388E3C;
             text-decoration: none;
         }
 
@@ -234,7 +234,7 @@ try {
 
         .stat-card i {
             font-size: 2em;
-            color: #4a90e2;
+            color: #4CAF50;
             margin-bottom: 10px;
         }
 
@@ -273,13 +273,13 @@ try {
         .activity-icon {
             width: 40px;
             height: 40px;
-            background: #e3f2fd;
+            background: #C8E6C9;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-right: 15px;
-            color: #1976d2;
+            color: #388E3C;
         }
 
         .activity-content {
@@ -307,13 +307,13 @@ try {
         }
 
         .status-badge.scheduled {
-            background: #e3f2fd;
-            color: #1976d2;
+            background: #C8E6C9;
+            color: #388E3C;
         }
 
         .status-badge.confirmed {
-            background: #e8f5e9;
-            color: #2e7d32;
+            background: #4CAF50;
+            color: white;
         }
 
         .status-badge.completed {
@@ -324,6 +324,27 @@ try {
         .status-badge.cancelled {
             background: #ffebee;
             color: #c62828;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #C8E6C9;
+        }
+        
+        .dashboard-header h1 {
+            color: #4CAF50;
+            font-size: 2rem;
+            margin: 0;
+        }
+        
+        .date-display {
+            color: #757575;
+            font-size: 1.1rem;
+            font-weight: 500;
         }
     </style>
 </head>
