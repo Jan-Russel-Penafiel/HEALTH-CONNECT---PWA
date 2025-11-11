@@ -7,7 +7,7 @@
   "background_color": "#ffffff",
   "theme_color": "#4CAF50",
   "orientation": "portrait",
-  "scope": "/connect/pages/admin/",
+  "scope": "/connect/",
   "icons": [
     {
       "src": "/connect/assets/images/favicon-16x16.png",

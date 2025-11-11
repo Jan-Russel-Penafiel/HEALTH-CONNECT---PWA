@@ -30,7 +30,10 @@ if (!in_array($current_script, $public_pages)) {
     $user_directory = $role_directories[$user_role] ?? '';
     
     // If user is not in their role directory, redirect them
-    if (!empty($user_directory) && !str_starts_with($current_path, $user_directory)) {
+    // But avoid infinite redirects by checking if we're already trying to go to the dashboard
+    if (!empty($user_directory) && 
+        !str_starts_with($current_path, $user_directory) && 
+        $current_script !== 'dashboard.php') {
         header("Location: " . $user_directory . "dashboard.php");
         exit;
     }

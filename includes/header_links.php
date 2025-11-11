@@ -39,32 +39,44 @@ $manifest_path = (strpos($current_path, '/connect/pages/admin/') !== false) ?
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
         try {
+            console.log('[PWA] Starting service worker initialization...');
+            
             // First, unregister any existing service workers to avoid conflicts
             const registrations = await navigator.serviceWorker.getRegistrations();
+            console.log(`[PWA] Found ${registrations.length} existing service worker registrations`);
+            
             for (let registration of registrations) {
-                await registration.unregister();
-                console.log('Unregistered existing SW:', registration.scope);
+                // Only unregister if it's NOT the unified service worker we want
+                if (!registration.scope.includes('/connect/service-worker.js')) {
+                    await registration.unregister();
+                    console.log('[PWA] Unregistered conflicting SW:', registration.scope);
+                }
             }
 
-            // Clear all caches to start fresh
+            // Clear old caches to prevent conflicts
             const cacheNames = await caches.keys();
             for (let cacheName of cacheNames) {
-                await caches.delete(cacheName);
-                console.log('Deleted cache:', cacheName);
+                // Only delete old role-specific caches, keep unified cache
+                if ((cacheName.includes('patient') || cacheName.includes('admin') || cacheName.includes('health-worker')) 
+                    && !cacheName.includes('unified')) {
+                    await caches.delete(cacheName);
+                    console.log('[PWA] Deleted old cache:', cacheName);
+                }
             }
 
             // Wait a moment then register the unified service worker
             setTimeout(async () => {
                 try {
                     const registration = await navigator.serviceWorker.register('/connect/service-worker.js', { 
-                        scope: '/connect/' 
+                        scope: '/connect/',
+                        updateViaCache: 'none' // Always check for updates
                     });
-                    console.log('Unified ServiceWorker registered successfully with scope:', registration.scope);
+                    console.log('[PWA] Unified ServiceWorker registered successfully with scope:', registration.scope);
                     
                     // Handle updates
                     registration.addEventListener('updatefound', () => {
                         const newWorker = registration.installing;
-                        console.log('Service Worker update found - auto-updating!');
+                        console.log('[PWA] Service Worker update found - auto-updating!');
                         
                         newWorker.addEventListener('statechange', () => {
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
@@ -74,11 +86,11 @@ if ('serviceWorker' in navigator) {
                         });
                     });
                 } catch (err) {
-                    console.log('ServiceWorker registration failed: ', err);
+                    console.error('[PWA] ServiceWorker registration failed:', err);
                 }
-            }, 500);
+            }, 1000); // Increased delay to ensure cleanup completes
         } catch (error) {
-            console.log('Error during SW cleanup:', error);
+            console.error('[PWA] Error during SW cleanup:', error);
         }
     });
 }
