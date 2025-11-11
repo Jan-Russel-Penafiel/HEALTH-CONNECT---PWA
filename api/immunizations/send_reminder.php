@@ -47,7 +47,11 @@ try {
 
     // Check if user is logged in
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-        logDebug("Session validation failed", $_SESSION);
+        logDebug("Session validation failed", [
+            'session_data' => $_SESSION,
+            'session_id' => session_id(),
+            'cookie_params' => session_get_cookie_params()
+        ]);
         ob_clean();
         echo json_encode([
             'success' => false,
@@ -55,6 +59,12 @@ try {
         ]);
         exit;
     }
+
+    logDebug("Session validation successful", [
+        'user_id' => $_SESSION['user_id'], 
+        'role' => $_SESSION['role'],
+        'session_id' => session_id()
+    ]);
 
     require_once __DIR__ . '/../../includes/config/database.php';
     require_once __DIR__ . '/../../includes/sms.php';
@@ -83,9 +93,10 @@ try {
 
     // Get and validate JSON data
     $raw_input = file_get_contents('php://input');
-    logDebug("Received raw input", ['input' => $raw_input]);
+    logDebug("Received raw input", ['input' => $raw_input, 'length' => strlen($raw_input)]);
 
     if (empty($raw_input)) {
+        logDebug("Empty raw input received");
         ob_clean();
         echo json_encode([
             'success' => false,
@@ -96,7 +107,7 @@ try {
 
     $data = json_decode($raw_input, true);
     if (json_last_error() !== JSON_ERROR_NONE) {
-        logDebug("JSON decode error", ['error' => json_last_error_msg()]);
+        logDebug("JSON decode error", ['error' => json_last_error_msg(), 'raw_input' => $raw_input]);
         ob_clean();
         echo json_encode([
             'success' => false,

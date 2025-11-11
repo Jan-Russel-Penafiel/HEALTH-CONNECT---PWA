@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Get user input
                 $username = trim($_POST['username']);
                 $email = trim($_POST['email']);
+                $password = trim($_POST['password'] ?? '');
                 $first_name = trim($_POST['first_name']);
                 $middle_name = trim($_POST['middle_name'] ?? '');
                 $last_name = trim($_POST['last_name']);
@@ -31,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $specialty = trim($_POST['specialty']);
 
                 // Validate required fields
-                if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || empty($gender) || empty($position) || empty($license_number) || empty($specialty)) {
+                if (empty($username) || empty($email) || empty($password) || empty($first_name) || empty($last_name) || empty($gender) || empty($position) || empty($license_number) || empty($specialty)) {
                     $_SESSION['error'] = "Please fill in all required fields.";
                 } else {
                     try {
@@ -55,11 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $conn->rollBack();
                             } else {
                                 // Insert into users table
-                                $query = "INSERT INTO users (role_id, username, email, mobile_number, first_name, middle_name, last_name, gender, address) VALUES ((SELECT role_id FROM user_roles WHERE role_name = 'health_worker'), :username, :email, :mobile, :fname, :mname, :lname, :gender, :address)";
+                                $query = "INSERT INTO users (role_id, username, email, password, mobile_number, first_name, middle_name, last_name, gender, address) VALUES ((SELECT role_id FROM user_roles WHERE role_name = 'health_worker'), :username, :email, :password, :mobile, :fname, :mname, :lname, :gender, :address)";
                                 $stmt = $conn->prepare($query);
                                 $stmt->execute([
                                     ':username' => $username,
                                     ':email' => $email,
+                                    ':password' => password_hash($password, PASSWORD_DEFAULT),
                                     ':mobile' => $mobile_number,
                                     ':fname' => $first_name,
                                     ':mname' => $middle_name,
@@ -756,6 +758,14 @@ try {
             document.getElementById('workerForm').reset();
             document.getElementById('userId').value = '';
             document.getElementById('username').removeAttribute('readonly');
+            
+            // Show password field in add mode
+            const passwordGroup = document.getElementById('password').closest('.form-group');
+            if (passwordGroup) {
+                passwordGroup.style.display = 'block';
+            }
+            document.getElementById('password').required = true;
+            
             modal.style.display = 'block';
         }
         
@@ -765,10 +775,17 @@ try {
             document.getElementById('userId').value = worker.user_id;
             document.getElementById('username').setAttribute('readonly', true);
             
+            // Hide password field in edit mode
+            const passwordGroup = document.getElementById('password').closest('.form-group');
+            if (passwordGroup) {
+                passwordGroup.style.display = 'none';
+            }
+            document.getElementById('password').required = false;
+            
             // Fill form fields
             Object.keys(worker).forEach(key => {
                 const element = document.getElementById(key);
-                if (element) {
+                if (element && key !== 'password') {
                     element.value = worker[key];
                 }
             });

@@ -37,50 +37,49 @@ $manifest_path = (strpos($current_path, '/connect/pages/admin/') !== false) ?
 <!-- PWA Service Worker Registration -->
 <script>
 if ('serviceWorker' in navigator) {
-    // First, unregister any existing service workers
-    navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
-            registration.unregister(); // Unregister each service worker
-        }
-    });
+    window.addEventListener('load', async () => {
+        try {
+            // First, unregister any existing service workers to avoid conflicts
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+                console.log('Unregistered existing SW:', registration.scope);
+            }
 
-    // Then register the new service worker
-    window.addEventListener('load', () => {
-        // Determine if we're in the admin section
-        const isAdmin = window.location.pathname.includes('/connect/pages/admin/');
-        
-        // Set the appropriate service worker path and scope
-        let swPath, swScope;
-        
-        if (isAdmin) {
-            swPath = '/connect/pages/admin/service-worker.js';
-            swScope = '/connect/pages/admin/';
-        } else {
-            swPath = '/connect/service-worker.js';
-            swScope = '/connect/';
-        }
-        
-        // Register the service worker with the correct path and scope
-        navigator.serviceWorker.register(swPath, { scope: swScope })
-            .then(registration => {
-                console.log('ServiceWorker registration successful with scope:', registration.scope);
-                
-                // Check for updates (auto-update - no user interaction needed)
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    console.log('Service Worker update found - auto-updating!');
-                    
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            // Auto-update: Skip waiting and activate immediately
-                            newWorker.postMessage({ type: 'SKIP_WAITING' });
-                        }
+            // Clear all caches to start fresh
+            const cacheNames = await caches.keys();
+            for (let cacheName of cacheNames) {
+                await caches.delete(cacheName);
+                console.log('Deleted cache:', cacheName);
+            }
+
+            // Wait a moment then register the unified service worker
+            setTimeout(async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('/connect/service-worker.js', { 
+                        scope: '/connect/' 
                     });
-                });
-            })
-            .catch(err => {
-                console.log('ServiceWorker registration failed: ', err);
-            });
+                    console.log('Unified ServiceWorker registered successfully with scope:', registration.scope);
+                    
+                    // Handle updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        console.log('Service Worker update found - auto-updating!');
+                        
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Auto-update: Skip waiting and activate immediately
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        });
+                    });
+                } catch (err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                }
+            }, 500);
+        } catch (error) {
+            console.log('Error during SW cleanup:', error);
+        }
     });
 }
 </script> 

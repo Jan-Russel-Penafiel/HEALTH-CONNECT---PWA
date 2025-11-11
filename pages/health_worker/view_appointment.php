@@ -8,19 +8,19 @@ if ($_SESSION['role'] !== 'health_worker') {
     exit();
 }
 
-// Check if appointment ID is provided
-if (!isset($_GET['id']) || empty($_GET['id'])) {
-    header('Location: appointments.php');
+// Check if appointment_id is provided
+if (!isset($_GET['id'])) {
+    header('Location: /connect/pages/health_worker/appointments.php');
     exit();
 }
 
-$appointment_id = intval($_GET['id']);
+$appointment_id = $_GET['id'];
 
 // Initialize database connection
 $database = new Database();
 $pdo = $database->getConnection();
 
-// Get health worker ID
+// Get health worker ID from the database
 try {
     $query = "SELECT health_worker_id FROM health_workers WHERE user_id = ?";
     $stmt = $pdo->prepare($query);
@@ -35,42 +35,60 @@ try {
     $health_worker_id = $health_worker['health_worker_id'];
 } catch (PDOException $e) {
     error_log("Error fetching health worker ID: " . $e->getMessage());
-    header('Location: appointments.php');
+    header('Location: /connect/pages/login.php');
     exit();
 }
 
 // Get appointment details
 try {
-    $query = "SELECT a.*, 
-                     u.first_name, u.last_name, u.email, u.mobile_number,
-                     s.status_name
-              FROM appointments a
+    $query = "SELECT a.appointment_id, a.appointment_date, a.appointment_time, a.notes, 
+                     a.status_id, a.reason, a.created_at, a.updated_at, 
+                     COALESCE(a.sms_notification_sent, 0) as sms_notification_sent,
+                     u.first_name, u.last_name, u.email, 
+                     COALESCE(u.mobile_number, '') as patient_phone,
+                     u.date_of_birth, u.address,
+                     p.patient_id, 
+                     COALESCE(p.blood_type, '') as blood_type, 
+                     COALESCE(p.height, 0) as height,
+                     COALESCE(p.weight, 0) as weight,
+                     COALESCE(p.emergency_contact_name, '') as emergency_contact_name, 
+                     COALESCE(p.emergency_contact_number, '') as emergency_contact_number,
+                     COALESCE(p.emergency_contact_relationship, '') as emergency_contact_relationship,
+                     s.status_name as status,
+                     hw_user.first_name as hw_first_name, hw_user.last_name as hw_last_name
+              FROM appointments a 
               JOIN patients p ON a.patient_id = p.patient_id
               JOIN users u ON p.user_id = u.user_id
               JOIN appointment_status s ON a.status_id = s.status_id
+              JOIN health_workers hw ON a.health_worker_id = hw.health_worker_id
+              JOIN users hw_user ON hw.user_id = hw_user.user_id
               WHERE a.appointment_id = ? AND a.health_worker_id = ?";
+    
     $stmt = $pdo->prepare($query);
     $stmt->execute([$appointment_id, $health_worker_id]);
     $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$appointment) {
-        header('Location: appointments.php');
+        error_log("Appointment not found or not authorized. ID: $appointment_id, Health Worker ID: $health_worker_id");
+        header('Location: /connect/pages/health_worker/appointments.php?error=not_found');
         exit();
     }
+
 } catch (PDOException $e) {
     error_log("Error fetching appointment: " . $e->getMessage());
-    header('Location: appointments.php');
+    error_log("SQL Error Code: " . $e->getCode());
+    error_log("SQL State: " . $pdo->errorInfo()[0]);
+    header('Location: /connect/pages/health_worker/appointments.php?error=database&msg=' . urlencode($e->getMessage()));
     exit();
 }
 
-// Get patient medical history
+// Get patient's medical history
 try {
-    $query = "SELECT mr.*, 
-                     hw.position,
-                     u.first_name as hw_first_name, u.last_name as hw_last_name
+    $query = "SELECT mr.record_id, mr.visit_date, mr.diagnosis, mr.treatment, mr.notes,
+                     u.first_name as doctor_first_name, u.last_name as doctor_last_name
               FROM medical_records mr
-              JOIN health_workers hw ON mr.health_worker_id = hw.health_worker_id
-              JOIN users u ON hw.user_id = u.user_id
+              LEFT JOIN health_workers hw ON mr.health_worker_id = hw.health_worker_id
+              LEFT JOIN users u ON hw.user_id = u.user_id
               WHERE mr.patient_id = ?
               ORDER BY mr.visit_date DESC
               LIMIT 5";
@@ -82,14 +100,29 @@ try {
     $medical_history = [];
 }
 
-// Get status options for dropdown
+// Get patient's immunization records
 try {
-    $query = "SELECT * FROM appointment_status ORDER BY status_id";
-    $stmt = $pdo->query($query);
-    $status_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $query = "SELECT i.immunization_id, i.administered_date, 
+                     v.vaccine_name, v.description as vaccine_description
+              FROM immunizations i
+              JOIN vaccines v ON i.vaccine_id = v.vaccine_id
+              WHERE i.patient_id = ?
+              ORDER BY i.administered_date DESC
+              LIMIT 5";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$appointment['patient_id']]);
+    $immunizations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    error_log("Error fetching status options: " . $e->getMessage());
-    $status_options = [];
+    error_log("Error fetching immunizations: " . $e->getMessage());
+    $immunizations = [];
+}
+
+// Calculate patient's age
+$age = '';
+if ($appointment['date_of_birth']) {
+    $dob = new DateTime($appointment['date_of_birth']);
+    $now = new DateTime();
+    $age = $now->diff($dob)->y;
 }
 ?>
 
@@ -100,173 +133,739 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Appointment - HealthConnect</title>
     <?php include __DIR__ . '/../../includes/header_links.php'; ?>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .page-container {
+            padding-top: 80px;
+            padding-bottom: 30px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: var(--primary-dark);
+            transform: translateX(-5px);
+        }
+
+        .back-link i {
+            font-size: 1rem;
+        }
+
+        .appointment-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .appointment-header h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .appointment-header h1 i {
+            font-size: 1.5rem;
+        }
+
+        .appointment-meta {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .appointment-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .appointment-meta-item i {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 992px) {
+            .content-grid {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--primary-light);
+        }
+
+        .card-header i {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-item {
+            margin-bottom: 1rem;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .info-value {
+            color: var(--text-primary);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .status-badge.scheduled {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-badge.confirmed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-badge.completed, 
+        .status-badge.done {
+            background: #f5f5f5;
+            color: #616161;
+        }
+
+        .status-badge.cancelled {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .status-badge.no-show {
+            background: #fce4ec;
+            color: #c2185b;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .action-buttons .btn {
+            flex: 1;
+            min-width: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success {
+            background: #28a745;
+            border: none;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            border: none;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            border: none;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            border: none;
+            color: #000;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3);
+        }
+
+        .history-item {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .history-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .history-date {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .history-diagnosis {
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .history-doctor {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .notes-section {
+            background: #fff9e6;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+
+        .notes-section h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            color: #856404;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .notes-section p {
+            margin: 0;
+            color: #666;
+        }
+
+        .sms-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .sms-indicator.sent {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .sms-indicator.not-sent {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .immunization-item {
+            padding: 1rem;
+            background: #f0f8ff;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #2196f3;
+            transition: all 0.3s ease;
+        }
+
+        .immunization-item:hover {
+            background: #e3f2fd;
+            transform: translateX(5px);
+        }
+
+        .immunization-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .immunization-date {
+            font-weight: 600;
+            color: #2196f3;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .immunization-vaccine {
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .immunization-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .appointment-header {
+                padding: 1.5rem;
+            }
+
+            .appointment-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .appointment-meta {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-buttons .btn {
+                width: 100%;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
     <?php include __DIR__ . '/../../includes/navbar.php'; ?>
 
     <!-- Toast container -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3">
-        <div id="smsToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header">
-                <i class="fas fa-sms me-2"></i>
-                <strong class="me-auto" id="toastTitle">SMS Notification</strong>
-                <small class="text-muted">just now</small>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body" id="toastMessage">
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+        <div id="notificationToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i id="toastIcon" class="fas fa-check-circle me-2"></i>
+                    <span id="toastMessage"></span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     </div>
 
-    <div class="container">
-        <div class="page-header">
-            <h1>Appointment Details</h1>
-            <div class="header-actions">
-                <a href="appointments.php" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Appointments
-                </a>
+    <div class="container page-container">
+        <a href="/connect/pages/health_worker/appointments.php" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to Appointments
+        </a>
+
+        <div class="appointment-header">
+            <h1>
+                <i class="fas fa-calendar-check"></i>
+                Appointment Details
+            </h1>
+            <div class="appointment-meta">
+                <div class="appointment-meta-item">
+                    <i class="fas fa-user"></i>
+                    <strong><?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?></strong>
+                </div>
+                <div class="appointment-meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <?php echo date('F j, Y', strtotime($appointment['appointment_date'])); ?>
+                </div>
+                <div class="appointment-meta-item">
+                    <i class="fas fa-clock"></i>
+                    <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
+                </div>
+                <div class="appointment-meta-item">
+                    <span class="status-badge <?php echo strtolower(str_replace(' ', '-', $appointment['status'])); ?>">
+                        <?php echo htmlspecialchars($appointment['status']); ?>
+                    </span>
+                </div>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header">
-                <div class="appointment-meta">
-                    <div class="appointment-date">
-                        <i class="far fa-calendar"></i> 
-                        <?php echo date('F j, Y', strtotime($appointment['appointment_date'])); ?>
+        <div class="content-grid">
+            <!-- Left Column -->
+            <div>
+                <!-- Patient Information -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-user-circle"></i>
+                        <h2>Patient Information</h2>
                     </div>
-                    <div class="appointment-time">
-                        <i class="far fa-clock"></i> 
-                        <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
-                    </div>
-                    <div class="appointment-status">
-                        <span class="status-badge <?php echo strtolower($appointment['status_name']); ?>">
-                            <?php echo $appointment['status_name']; ?>
-                        </span>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Full Name</div>
+                            <div class="info-value"><?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Age</div>
+                            <div class="info-value"><?php echo $age ? $age . ' years old' : 'N/A'; ?></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Date of Birth</div>
+                            <div class="info-value"><?php echo $appointment['date_of_birth'] ? date('F j, Y', strtotime($appointment['date_of_birth'])) : 'N/A'; ?></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Blood Type</div>
+                            <div class="info-value"><?php echo htmlspecialchars($appointment['blood_type'] ?: 'N/A'); ?></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Height</div>
+                            <div class="info-value"><?php echo $appointment['height'] > 0 ? $appointment['height'] . ' cm' : 'N/A'; ?></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Weight</div>
+                            <div class="info-value"><?php echo $appointment['weight'] > 0 ? $appointment['weight'] . ' kg' : 'N/A'; ?></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Email</div>
+                            <div class="info-value"><?php echo htmlspecialchars($appointment['email']); ?></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Phone</div>
+                            <div class="info-value"><?php echo htmlspecialchars($appointment['patient_phone'] ?: 'N/A'); ?></div>
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <div class="info-label">Address</div>
+                            <div class="info-value"><?php echo htmlspecialchars($appointment['address'] ?: 'N/A'); ?></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h3>Patient Information</h3>
-                        <div class="info-group">
-                            <label>Name:</label>
-                            <div><?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?></div>
+
+                <!-- Emergency Contact -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-phone-alt"></i>
+                        <h2>Emergency Contact</h2>
+                    </div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Contact Name</div>
+                            <div class="info-value"><?php echo htmlspecialchars($appointment['emergency_contact_name'] ?: 'N/A'); ?></div>
                         </div>
-                        <div class="info-group">
-                            <label>Email:</label>
-                            <div><?php echo htmlspecialchars($appointment['email']); ?></div>
+                        <div class="info-item">
+                            <div class="info-label">Contact Number</div>
+                            <div class="info-value"><?php echo htmlspecialchars($appointment['emergency_contact_number'] ?: 'N/A'); ?></div>
                         </div>
-                        <div class="info-group">
-                            <label>Phone:</label>
-                            <div><?php echo htmlspecialchars($appointment['mobile_number']); ?></div>
-                        </div>
-                        <div class="info-group">
-                            <label>Reason for Visit:</label>
-                            <div><?php echo !empty($appointment['reason']) ? htmlspecialchars($appointment['reason']) : '<span class="text-muted">Not specified</span>'; ?></div>
+                        <div class="info-item">
+                            <div class="info-label">Relationship</div>
+                            <div class="info-value"><?php echo htmlspecialchars($appointment['emergency_contact_relationship'] ?: 'N/A'); ?></div>
                         </div>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <h3>Appointment Notes</h3>
-                        <div class="notes-section">
-                            <?php if (!empty($appointment['notes'])): ?>
-                                <p><?php echo nl2br(htmlspecialchars($appointment['notes'])); ?></p>
-                            <?php else: ?>
-                                <p class="text-muted">No notes available</p>
+                </div>
+
+                <!-- Appointment Details -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle"></i>
+                        <h2>Appointment Details</h2>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Reason for Visit</div>
+                        <div class="info-value"><?php echo htmlspecialchars($appointment['reason'] ?: 'N/A'); ?></div>
+                    </div>
+                    <?php if ($appointment['notes']): ?>
+                    <div class="notes-section">
+                        <h3><i class="fas fa-sticky-note"></i> Notes</h3>
+                        <p><?php echo nl2br(htmlspecialchars($appointment['notes'])); ?></p>
+                    </div>
+                    <?php endif; ?>
+                    <div class="info-item" style="margin-top: 1rem;">
+                        <div class="info-label">Health Worker</div>
+                        <div class="info-value">Dr. <?php echo htmlspecialchars($appointment['hw_first_name'] . ' ' . $appointment['hw_last_name']); ?></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Created At</div>
+                        <div class="info-value"><?php echo date('F j, Y g:i A', strtotime($appointment['created_at'])); ?></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Last Updated</div>
+                        <div class="info-value"><?php echo date('F j, Y g:i A', strtotime($appointment['updated_at'])); ?></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">SMS Notification</div>
+                        <div class="info-value">
+                            <span class="sms-indicator <?php echo $appointment['sms_notification_sent'] ? 'sent' : 'not-sent'; ?>">
+                                <i class="fas <?php echo $appointment['sms_notification_sent'] ? 'fa-check-circle' : 'fa-times-circle'; ?>"></i>
+                                <?php echo $appointment['sms_notification_sent'] ? 'Sent' : 'Not Sent'; ?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medical History -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-file-medical"></i>
+                        <h2>Recent Medical History</h2>
+                    </div>
+                    <?php if (!empty($medical_history)): ?>
+                        <?php foreach ($medical_history as $record): ?>
+                        <div class="history-item">
+                            <div class="history-date">
+                                <i class="fas fa-calendar"></i>
+                                <?php echo date('F j, Y', strtotime($record['visit_date'])); ?>
+                            </div>
+                            <div class="history-diagnosis">
+                                <strong>Diagnosis:</strong> <?php echo htmlspecialchars($record['diagnosis']); ?>
+                            </div>
+                            <?php if ($record['treatment']): ?>
+                            <div class="history-diagnosis">
+                                <strong>Treatment:</strong> <?php echo htmlspecialchars($record['treatment']); ?>
+                            </div>
+                            <?php endif; ?>
+                            <?php if ($record['doctor_first_name']): ?>
+                            <div class="history-doctor">
+                                <i class="fas fa-user-md"></i>
+                                Dr. <?php echo htmlspecialchars($record['doctor_first_name'] . ' ' . $record['doctor_last_name']); ?>
+                            </div>
                             <?php endif; ?>
                         </div>
-                    </div>
-                </div>
-                
-                <?php if ($appointment['status_name'] === 'Scheduled' || $appointment['status_name'] === 'Confirmed'): ?>
-                <div class="action-section">
-                    <h3>Update Status</h3>
-                    <div class="status-update-form">
-                        <select id="statusSelect" class="form-control">
-                            <?php foreach ($status_options as $option): ?>
-                                <option value="<?php echo $option['status_name']; ?>" 
-                                        <?php echo ($option['status_name'] === $appointment['status_name']) ? 'selected' : ''; ?>>
-                                    <?php echo $option['status_name']; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <button class="btn btn-primary" onclick="updateAppointmentStatus()">Update Status</button>
-                    </div>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($medical_history)): ?>
-                <div class="medical-history-section">
-                    <h3>Recent Medical History</h3>
-                    <div class="medical-records">
-                        <?php foreach ($medical_history as $record): ?>
-                            <div class="medical-record-card">
-                                <div class="record-header">
-                                    <div class="record-date">
-                                        <?php echo date('F j, Y', strtotime($record['visit_date'])); ?>
-                                    </div>
-                                    <div class="record-doctor">
-                                        Dr. <?php echo htmlspecialchars($record['hw_first_name'] . ' ' . $record['hw_last_name']); ?> 
-                                        (<?php echo htmlspecialchars($record['position']); ?>)
-                                    </div>
-                                </div>
-                                <div class="record-content">
-                                    <?php if (!empty($record['chief_complaint'])): ?>
-                                        <div class="record-section">
-                                            <h4>Chief Complaint</h4>
-                                            <p><?php echo nl2br(htmlspecialchars($record['chief_complaint'])); ?></p>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <?php if (!empty($record['diagnosis'])): ?>
-                                        <div class="record-section">
-                                            <h4>Diagnosis</h4>
-                                            <p><?php echo nl2br(htmlspecialchars($record['diagnosis'])); ?></p>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <?php if (!empty($record['treatment'])): ?>
-                                        <div class="record-section">
-                                            <h4>Treatment</h4>
-                                            <p><?php echo nl2br(htmlspecialchars($record['treatment'])); ?></p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
                         <?php endforeach; ?>
+                        <a href="/connect/pages/health_worker/view_medical_history.php?patient_id=<?php echo $appointment['patient_id']; ?>" class="btn btn-secondary" style="margin-top: 1rem;">
+                            <i class="fas fa-history"></i>
+                            View Full History
+                        </a>
+                    <?php else: ?>
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p>No medical history available</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Immunization Records -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-syringe"></i>
+                        <h2>Recent Immunizations</h2>
+                    </div>
+                    <?php if (!empty($immunizations)): ?>
+                        <?php foreach ($immunizations as $immunization): ?>
+                        <div class="immunization-item">
+                            <div class="immunization-date">
+                                <i class="fas fa-calendar"></i>
+                                <?php echo date('F j, Y', strtotime($immunization['administered_date'])); ?>
+                            </div>
+                            <div class="immunization-vaccine">
+                                <?php echo htmlspecialchars($immunization['vaccine_name']); ?>
+                            </div>
+                            <?php if ($immunization['vaccine_description']): ?>
+                            <div class="immunization-description">
+                                <?php echo htmlspecialchars($immunization['vaccine_description']); ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php endforeach; ?>
+                        <a href="/connect/pages/health_worker/view_immunization.php?patient_id=<?php echo $appointment['patient_id']; ?>" class="btn btn-secondary" style="margin-top: 1rem;">
+                            <i class="fas fa-history"></i>
+                            View Full Immunization Record
+                        </a>
+                    <?php else: ?>
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p>No immunization records available</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div>
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-bolt"></i>
+                        <h2>Quick Actions</h2>
+                    </div>
+                    <div class="action-buttons" style="flex-direction: column;">
+                        <?php if ($appointment['status_id'] == 1): // Scheduled ?>
+                            <button onclick="updateStatus(<?php echo $appointment_id; ?>, 'confirmed')" class="btn btn-success">
+                                <i class="fas fa-check"></i>
+                                Confirm Appointment
+                            </button>
+                        <?php endif; ?>
+                        
+                        <?php if ($appointment['status_id'] != 3 && $appointment['status_id'] != 4): // Not completed or cancelled ?>
+                            <button onclick="updateStatus(<?php echo $appointment_id; ?>, 'done')" class="btn btn-primary">
+                                <i class="fas fa-check-double"></i>
+                                Mark as Done
+                            </button>
+                            <button onclick="updateStatus(<?php echo $appointment_id; ?>, 'cancelled')" class="btn btn-danger">
+                                <i class="fas fa-times"></i>
+                                Cancel Appointment
+                            </button>
+                            <button onclick="updateStatus(<?php echo $appointment_id; ?>, 'no show')" class="btn btn-warning">
+                                <i class="fas fa-user-times"></i>
+                                Mark as No Show
+                            </button>
+                        <?php endif; ?>
+                        
+                        <a href="/connect/pages/health_worker/medical_history.php?patient_id=<?php echo $appointment['patient_id']; ?>&appointment_id=<?php echo $appointment_id; ?>" class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                            Add Medical Record
+                        </a>
+                        
+                        <a href="/connect/pages/health_worker/generate_slip.php?appointment_id=<?php echo $appointment_id; ?>" class="btn btn-secondary" target="_blank">
+                            <i class="fas fa-print"></i>
+                            Print Appointment Slip
+                        </a>
                     </div>
                 </div>
-                <?php endif; ?>
             </div>
         </div>
     </div>
 
     <?php include __DIR__ . '/../../includes/footer.php'; ?>
-
+    
     <script>
     // Function to show toast notification
-    function showToast(message, success = true) {
-        const toast = document.getElementById('smsToast');
-        const toastTitle = document.getElementById('toastTitle');
+    function showToast(message, status = 'success') {
+        const toast = document.getElementById('notificationToast');
         const toastMessage = document.getElementById('toastMessage');
+        const toastIcon = document.getElementById('toastIcon');
         
-        // Set toast classes based on success/failure
-        toast.classList.remove('bg-success', 'bg-danger', 'text-white');
-        if (success) {
-            toast.classList.add('bg-success', 'text-white');
-            toastTitle.innerHTML = '<i class="fas fa-check-circle me-2"></i>SMS Sent';
-        } else {
-            toast.classList.add('bg-danger', 'text-white');
-            toastTitle.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>SMS Failed';
+        // Remove existing background classes
+        toast.className = 'toast align-items-center text-white border-0';
+        
+        // Set classes and icon based on status
+        switch(status) {
+            case 'success':
+                toast.classList.add('bg-success');
+                toastIcon.className = 'fas fa-check-circle me-2';
+                break;
+            case 'error':
+                toast.classList.add('bg-danger');
+                toastIcon.className = 'fas fa-exclamation-circle me-2';
+                break;
+            case 'info':
+                toast.classList.add('bg-info');
+                toastIcon.className = 'fas fa-info-circle me-2';
+                break;
+            default:
+                toast.classList.add('bg-secondary');
+                toastIcon.className = 'fas fa-bell me-2';
         }
         
         // Set message
         toastMessage.textContent = message;
         
-        // Show toast
+        // Initialize and show toast
         const bsToast = new bootstrap.Toast(toast, {
             animation: true,
             autohide: true,
@@ -275,127 +874,56 @@ try {
         bsToast.show();
     }
 
-    function updateAppointmentStatus() {
-        const status = document.getElementById('statusSelect').value;
+    // Function to update status
+    function updateStatus(id, status) {
+        let confirmMessage = 'Are you sure you want to mark this appointment as ' + status + '?';
         
-        if (confirm('Are you sure you want to update the appointment status to ' + status + '?')) {
+        if (confirm(confirmMessage)) {
             fetch('/connect/api/appointments/update_status.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    appointment_id: <?php echo $appointment_id; ?>,
+                    appointment_id: id,
                     status: status
-                })
+                }),
+                credentials: 'same-origin'
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Function to safely insert alert messages
-                    function showAlert(message, type = 'success') {
-                        const alertDiv = document.createElement('div');
-                        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-                        alertDiv.innerHTML = `
-                            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> 
-                            ${message}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        `;
-                        
-                        // Find the container and the first child (if any)
-                        const container = document.querySelector('.container');
-                        if (container) {
-                            const firstChild = container.firstChild;
-                            if (firstChild) {
-                                container.insertBefore(alertDiv, firstChild);
-                            } else {
-                                container.appendChild(alertDiv);
-                            }
-                        }
-                        
-                        // Auto-remove the alert after 5 seconds
-                        setTimeout(() => {
-                            alertDiv.remove();
-                        }, 5000);
-                    }
-
-                    // If status is "Confirmed", send SMS notification
-                    if (status.toLowerCase() === 'confirmed') {
-                        // Check if SMS was already sent in the status update response
-                        if (data.sms_result) {
-                            if (data.sms_result.success) {
-                                window.location.href = 'appointments.php?sms_status=success&message=' + encodeURIComponent('SMS notification sent successfully to patient');
-                            } else {
-                                if (data.sms_result.message.includes('already sent')) {
-                                    window.location.href = 'appointments.php?sms_status=info&message=' + encodeURIComponent('SMS notification was already sent for this appointment');
-                                } else {
-                                    window.location.href = 'appointments.php?sms_status=error&message=' + encodeURIComponent('Failed to send SMS: ' + data.sms_result.message);
-                                }
-                            }
-                        } else {
-                            // Send SMS notification only if it wasn't handled in the status update
-                            fetch('/connect/api/appointments/send_reminder.php', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    appointment_id: <?php echo $appointment_id; ?>
-                                })
-                            })
-                            .then(response => response.json())
-                            .then(smsData => {
-                                if (smsData.success) {
-                                    window.location.href = 'appointments.php?sms_status=success&message=' + encodeURIComponent('SMS notification sent successfully to patient');
-                                } else {
-                                    if (smsData.message.includes('already sent')) {
-                                        window.location.href = 'appointments.php?sms_status=info&message=' + encodeURIComponent('SMS notification was already sent for this appointment');
-                                    } else {
-                                        window.location.href = 'appointments.php?sms_status=error&message=' + encodeURIComponent('Failed to send SMS: ' + smsData.message);
-                                    }
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error sending SMS:', error);
-                                window.location.href = 'appointments.php?sms_status=error&message=' + encodeURIComponent('Failed to send SMS: Network or server error');
-                            });
-                        }
-                    } else {
-                        // For non-confirmed status updates, redirect back to appointments
-                        window.location.href = 'appointments.php?status_update=success&message=' + encodeURIComponent('Status updated successfully to ' + status);
-                    }
-                    
-                    // Reload the page after a short delay
-                    setTimeout(() => location.reload(), 5000);
+                    showToast(data.message, 'success');
+                    // Redirect back to appointments page after 1 second
+                    setTimeout(() => {
+                        window.location.href = '/connect/pages/health_worker/appointments.php?status_update=success&message=' + encodeURIComponent(data.message);
+                    }, 1000);
                 } else {
-                    showAlert('Error updating appointment status: ' + data.message, 'danger');
+                    showToast(data.message || 'Failed to update appointment status', 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showAlert('An error occurred while updating the appointment status', 'danger');
+                showToast('An error occurred while updating the appointment status', 'error');
             });
         }
     }
-    </script>
 
-    <style>
-    /* Toast styling */
-    .toast {
-        min-width: 300px;
-    }
-    .toast.bg-success .toast-header,
-    .toast.bg-danger .toast-header {
-        background-color: rgba(255, 255, 255, 0.1);
-        color: white;
-    }
-    .toast.bg-success .btn-close,
-    .toast.bg-danger .btn-close {
-        filter: brightness(0) invert(1);
-    }
-    .toast-container {
-        z-index: 1056;
-    }
-    </style>
+    // Check for URL parameters and show toast if needed
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const message = urlParams.get('message');
+        const status = urlParams.get('status');
+
+        if (message) {
+            const decodedMessage = decodeURIComponent(message);
+            showToast(decodedMessage, status || 'info');
+            
+            // Clean up URL without reloading the page
+            const newUrl = window.location.pathname + '?id=<?php echo $appointment_id; ?>';
+            window.history.replaceState({}, document.title, newUrl);
+        }
+    });
+    </script>
 </body>
-</html> 
+</html>

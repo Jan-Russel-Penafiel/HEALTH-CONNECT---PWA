@@ -196,14 +196,21 @@ try {
             
             .table-actions .btn {
                 padding: 0.4rem 0.8rem;
-                font-size: 0.8rem;
-                display: flex;
-                align-items: center;
-                gap: 0.3rem;
-                white-space: nowrap;
+                font-size: 0.85rem;
+                margin-right: 0.25rem;
+                margin-bottom: 0.25rem;
             }
             
-            .table-reason {
+            .btn-info {
+                background: #17a2b8;
+                border: none;
+                color: white;
+            }
+            
+            .btn-info:hover {
+                background: #138496;
+                color: white;
+            }            .table-reason {
                 max-width: 200px;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -833,7 +840,7 @@ try {
                         </td>
                         <td>
                             <div class="table-actions">
-                                <a href="view_appointment.php?id=<?php echo $appointment['id']; ?>" class="btn btn-view" title="View Details">
+                                <a href="/connect/pages/health_worker/view_appointment.php?id=<?php echo $appointment['id']; ?>" class="btn btn-info" title="View Details">
                                     <i class="fas fa-eye"></i> View
                                 </a>
                                 <?php if ($appointment['status'] === 'Scheduled' || $appointment['status'] === 'Confirmed'): ?>
@@ -894,7 +901,7 @@ try {
                     </div>
                     
                     <div class="appointment-actions">
-                        <a href="view_appointment.php?id=<?php echo $appointment['id']; ?>" class="btn btn-view" title="View Details">
+                        <a href="/connect/pages/health_worker/view_appointment.php?id=<?php echo $appointment['id']; ?>" class="btn btn-info" title="View Details">
                             <i class="fas fa-eye"></i> View
                         </a>
                         <?php if ($appointment['status'] === 'Scheduled' || $appointment['status'] === 'Confirmed'): ?>
