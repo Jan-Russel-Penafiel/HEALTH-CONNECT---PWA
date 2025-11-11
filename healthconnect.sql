@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 25, 2025 at 10:17 AM
+-- Generation Time: Nov 11, 2025 at 11:43 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -46,10 +46,7 @@ CREATE TABLE `appointments` (
 --
 
 INSERT INTO `appointments` (`appointment_id`, `patient_id`, `health_worker_id`, `appointment_date`, `appointment_time`, `status_id`, `reason`, `notes`, `sms_notification_sent`, `created_at`, `updated_at`) VALUES
-(3, 1, 1, '2025-07-09', '15:30:00', 1, NULL, 'asdada', 0, '2025-07-09 13:35:09', '2025-07-09 13:35:09'),
-(4, 1, 1, '2025-07-10', '16:00:00', 3, NULL, 'sdada', 0, '2025-07-09 13:36:01', '2025-07-11 07:19:21'),
-(5, 1, 1, '2025-07-09', '09:30:00', 1, NULL, 'asdadas', 0, '2025-07-09 13:36:23', '2025-07-09 13:36:23'),
-(6, 2, 1, '2025-07-20', '10:00:00', 2, 'Check of BP ', 'I lab you russel', 0, '2025-07-11 11:52:21', '2025-07-11 15:04:06');
+(11, 15, 2, '2025-11-14', '14:00:00', 2, 'asdad', 'asda', 1, '2025-11-11 09:47:10', '2025-11-11 10:12:55');
 
 -- --------------------------------------------------------
 
@@ -95,7 +92,7 @@ CREATE TABLE `health_workers` (
 --
 
 INSERT INTO `health_workers` (`health_worker_id`, `user_id`, `position`, `license_number`, `specialty`, `created_at`, `updated_at`) VALUES
-(1, 2, 'asda', '3212', 'asdada', '2025-07-09 12:54:19', '2025-07-09 12:54:19');
+(2, 15, 'asda', '3212', 'asdada', '2025-08-23 06:31:05', '2025-08-23 06:31:05');
 
 -- --------------------------------------------------------
 
@@ -121,7 +118,7 @@ CREATE TABLE `immunization_records` (
 --
 
 INSERT INTO `immunization_records` (`immunization_record_id`, `patient_id`, `immunization_type_id`, `health_worker_id`, `dose_number`, `date_administered`, `next_schedule_date`, `notes`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 1, 1, '2025-07-09', NULL, 'asdasa', '2025-07-09 13:52:11', '2025-07-09 13:52:11');
+(2, 15, 2, 2, 1, '2025-11-11', '2025-12-11', 'asda', '2025-11-11 09:44:50', '2025-11-11 09:44:50');
 
 -- --------------------------------------------------------
 
@@ -174,18 +171,6 @@ CREATE TABLE `medical_records` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `medical_records`
---
-
-INSERT INTO `medical_records` (`record_id`, `patient_id`, `health_worker_id`, `visit_date`, `chief_complaint`, `diagnosis`, `treatment`, `prescription`, `notes`, `follow_up_date`, `created_at`, `updated_at`) VALUES
-(1, 1, NULL, '2025-07-09 21:22:00', 'adasd', 'asda', 'sada', 'ada', 'asda', '2025-07-10', '2025-07-09 13:22:26', '2025-07-09 13:22:26'),
-(2, 1, NULL, '2025-07-09 21:22:00', 'adasd', 'asda', 'sada', 'ada', 'asda', '2025-07-10', '2025-07-09 13:23:19', '2025-07-09 13:23:19'),
-(3, 1, NULL, '2025-07-09 21:25:00', 'asda', 'asda', 'asda', 'asda', 'asda', '2025-07-17', '2025-07-09 13:25:17', '2025-07-09 13:25:17'),
-(4, 1, NULL, '2025-07-09 21:25:00', 'asda', 'asda', 'asda', 'asda', 'asda', '2025-07-17', '2025-07-09 13:25:38', '2025-07-09 13:25:38'),
-(5, 1, 1, '2025-07-09 21:25:00', 'asda', 'asda', 'asda', 'asda', 'asda', '2025-07-17', '2025-07-09 13:25:53', '2025-07-09 13:25:53'),
-(6, 1, 1, '2025-07-11 15:35:00', 'Hdhd', 'Sbsbs', 'Hshs', 'Hdhd', 'Hdhd', '2025-07-12', '2025-07-11 07:36:05', '2025-07-11 07:36:05');
-
 -- --------------------------------------------------------
 
 --
@@ -212,13 +197,7 @@ CREATE TABLE `patients` (
 --
 
 INSERT INTO `patients` (`patient_id`, `user_id`, `blood_type`, `height`, `weight`, `emergency_contact_name`, `emergency_contact_number`, `emergency_contact_relationship`, `created_at`, `updated_at`, `is_approved`, `approved_at`) VALUES
-(1, 3, 'A+', 165.00, 52.00, 'Jan Russel asdadgd Peñafiel', '09677726912', 'asdada', '2025-07-09 13:13:49', '2025-07-11 15:14:43', 1, '2025-07-11 15:14:43'),
-(2, 4, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-11 11:50:00', '2025-07-11 15:14:43', 1, '2025-07-11 15:14:43'),
-(3, 5, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-11 11:51:33', '2025-07-11 15:14:43', 1, '2025-07-11 15:14:43'),
-(4, 6, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-11 15:27:31', '2025-07-11 15:59:06', 1, '2025-07-11 15:59:06'),
-(5, 7, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-12 15:07:55', '2025-07-12 15:12:53', 1, '2025-07-12 15:12:53'),
-(6, 8, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-21 12:50:35', '2025-07-21 12:50:35', 0, NULL),
-(7, 9, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-21 12:50:55', '2025-07-21 12:50:55', 0, NULL);
+(15, 18, 'B+', 154.00, 232.00, 'Jan Russel Elizares Peñafiel', '09677726912', 'sadada', '2025-08-23 07:12:34', '2025-08-23 07:12:34', 1, '2025-08-23 07:12:34');
 
 -- --------------------------------------------------------
 
@@ -245,13 +224,15 @@ INSERT INTO `settings` (`setting_id`, `name`, `value`, `created_at`, `updated_at
 (4, 'working_hours_end', '17:00', '2025-07-09 12:55:33', '2025-07-09 12:55:33'),
 (5, 'enable_sms_notifications', '1', '2025-07-09 12:55:33', '2025-07-09 12:55:49'),
 (6, 'enable_email_notifications', '1', '2025-07-09 12:55:33', '2025-07-09 12:55:49'),
-(7, 'sms_api_key', '2100|J9BVGEx9FFOJAbHV0xfn6SMOkKBt80HTLjHb6zZX', '2025-07-09 12:55:33', '2025-07-09 12:55:33'),
+(7, 'sms_api_key', '1ef3b27ea753780a90cbdf07d027fb7b52791004', '2025-07-09 12:55:33', '2025-11-09 06:42:15'),
 (8, 'sms_sender_id', 'PhilSMS', '2025-07-09 12:55:33', '2025-07-09 12:55:33'),
 (9, 'smtp_host', 'smtp.gmail.com', '2025-07-09 12:55:33', '2025-07-09 12:55:33'),
 (10, 'smtp_port', '587', '2025-07-09 12:55:33', '2025-07-09 12:55:33'),
 (11, 'smtp_username', 'vmctaccollege@gmail.com', '2025-07-09 12:55:33', '2025-07-09 12:55:33'),
 (12, 'smtp_password', 'tqqs fkkh lbuz jbeg', '2025-07-09 12:55:33', '2025-07-09 12:55:33'),
-(13, 'smtp_encryption', 'tls', '2025-07-09 12:55:33', '2025-07-09 12:55:33');
+(13, 'smtp_encryption', 'tls', '2025-07-09 12:55:33', '2025-07-09 12:55:33'),
+(86, 'sms_provider', 'IPROG SMS', '2025-11-09 06:42:15', '2025-11-09 06:42:15'),
+(87, 'sms_api_url', 'https://sms.iprogtech.com/api/v1/sms_messages', '2025-11-09 06:42:15', '2025-11-09 06:42:15');
 
 -- --------------------------------------------------------
 
@@ -274,18 +255,7 @@ CREATE TABLE `sms_logs` (
 --
 
 INSERT INTO `sms_logs` (`sms_id`, `appointment_id`, `recipient_number`, `message`, `status`, `sent_at`, `created_at`) VALUES
-(1, 4, '639677726912', 'Hi Jan Russel Peñafiel, your appointment on July 10, 2025 at 04:00 PM has been confirmed.', 'Sent', '2025-07-10 10:56:14', '2025-07-10 10:56:14'),
-(2, 4, '639677726912', 'Hi Jan Russel Peñafiel, your appointment on July 10, 2025 at 04:00 PM has been confirmed.', 'Sent', '2025-07-10 10:56:45', '2025-07-10 10:56:45'),
-(3, 4, '639677726912', 'Hi Jan Russel Peñafiel, your appointment on July 10, 2025 at 04:00 PM has been confirmed.', 'Sent', '2025-07-10 10:57:57', '2025-07-10 10:57:57'),
-(4, 4, '639677726912', 'Hi Jan Russel Peñafiel, your appointment on July 10, 2025 at 04:00 PM has been confirmed.', 'Sent', '2025-07-10 11:00:20', '2025-07-10 11:00:20'),
-(12, 4, '639677726912', 'Hello Jan Russel, your appointment at Brgy. Poblacion Health Center has been CONFIRMED for July 10, 2025 at 4:00 PM with Dr. Jan Russel Peñafiel. Please arrive 15 minutes early. Thank you!', 'failed', '2025-07-10 12:40:07', '2025-07-10 12:40:07'),
-(13, 4, '639677726912', 'Hello Jan Russel, your appointment at Brgy. Poblacion Health Center has been CONFIRMED for July 10, 2025 at 4:00 PM with Dr. Jan Russel Peñafiel. Please arrive 15 minutes early. Thank you!', 'failed', '2025-07-10 12:46:10', '2025-07-10 12:46:10'),
-(14, 4, '639677726912', 'Hello Jan Russel, your appointment at Brgy. Poblacion Health Center has been CONFIRMED for July 10, 2025 at 4:00 PM with Dr. Jan Russel Peñafiel. Please arrive 15 minutes early. Thank you!', 'failed', '2025-07-10 12:46:14', '2025-07-10 12:46:14'),
-(15, 4, '639677726912', 'Hello Jan Russel, your appointment at Brgy. Poblacion Health Center has been CONFIRMED for July 10, 2025 at 4:00 PM with Dr. Jan Russel Peñafiel. Please arrive 15 minutes early. Thank you!', 'failed', '2025-07-10 12:50:53', '2025-07-10 12:50:53'),
-(16, 4, '639677726912', 'Hello Jan Russel, your appointment at Brgy. Poblacion Health Center has been CONFIRMED for July 10, 2025 at 4:00 PM with Dr. Jan Russel Peñafiel. Please arrive 15 minutes early. Thank you!', 'failed', '2025-07-10 12:51:00', '2025-07-10 12:51:00'),
-(17, 4, '639677726912', 'Hello Jan Russel, your appointment at Brgy. Poblacion Health Center has been CONFIRMED for July 10, 2025 at 4:00 PM with Dr. Jan Russel Peñafiel. Please arrive 15 minutes early. Thank you!', 'failed', '2025-07-10 12:55:29', '2025-07-10 12:55:29'),
-(18, 4, '639677726912', 'Hello Jan Russel, your appointment at Brgy. Poblacion Health Center has been CONFIRMED for July 10, 2025 at 4:00 PM with Dr. Jan Russel Peñafiel. Please arrive 15 minutes early. Thank you!', 'failed', '2025-07-10 13:00:35', '2025-07-10 13:00:35'),
-(19, 6, '639317102542', 'Hello Jaspherjohn, your appointment at Brgy. Poblacion Health Center has been CONFIRMED for July 20, 2025 at 10:00 AM with Dr. Jan Russel Peñafiel. Please arrive 15 minutes early. Thank you!', 'failed', '2025-07-11 15:04:10', '2025-07-11 15:04:10');
+(20, 11, '09677726912', 'Hello testpatientname, your appointment at Brgy. Poblacion Health Center has been CONFIRMED for November 14, 2025 at 2:00 PM with Dr. testname testlastname. Please arrive 15 minutes early. Thank you!', 'sent', '2025-11-11 10:12:45', '2025-11-11 10:12:45');
 
 -- --------------------------------------------------------
 
@@ -320,15 +290,9 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`user_id`, `role_id`, `username`, `email`, `password`, `mobile_number`, `first_name`, `middle_name`, `last_name`, `gender`, `date_of_birth`, `address`, `profile_picture`, `is_active`, `last_login`, `otp`, `otp_expiry`, `created_at`, `updated_at`) VALUES
-(1, 1, 'admin', 'penafielliezl1122@gmail.com', 'admin123', NULL, 'System', NULL, 'Admin', 'Other', NULL, NULL, NULL, 1, '2025-07-25 11:11:50', NULL, NULL, '2025-07-09 12:04:56', '2025-07-25 03:11:50'),
-(2, 2, 'test', 'russeljan5555@gmail.com', 'test123', '09677726912', 'Jan Russel', 'asdadgd', 'Peñafiel', 'Male', NULL, '', NULL, 1, '2025-07-25 13:49:14', NULL, NULL, '2025-07-09 12:54:19', '2025-07-25 05:49:14'),
-(3, 3, 'penafielliezl9999@gmail.com', 'janrusselpenafiel01172005@gmail.com', 'patient123', '09677726912', 'Jan Russel', 'asdadgd', 'Peñafiel', 'Male', '2005-01-20', 'Panay Santo Niño South Cotabato', NULL, 1, '2025-07-23 11:32:27', NULL, NULL, '2025-07-09 13:13:49', '2025-07-23 03:32:27'),
-(4, 3, 'Jaspherjohn', 'jasperjohnamoguis@sksu.edu.ph', 'jaspher123', '09317102542', 'Jaspherjohn', 'Canlas', 'Amoguis', 'Male', '2005-02-15', 'Brgy.tina purok santan tomboc subdiv. Tacurong City', NULL, 1, '2025-07-11 19:51:07', NULL, NULL, '2025-07-11 11:50:00', '2025-07-11 11:51:07'),
-(5, 3, 'jerome', 'razuljerome@gmail.com', 'jerome123', '09263232987', 'Razul Jerome', 'Azarcon', 'Andal', 'Male', '2003-08-24', 'brgy,mars planet jupiter', NULL, 1, NULL, '532884', '2025-07-11 14:06:41', '2025-07-11 11:51:33', '2025-07-11 11:56:41'),
-(6, 3, 'Russel', 'penafielliezl9999@gmail.com', 'russel123', '09677726912', 'Jan Russels', 'Elizares', 'Peñafiel', 'Male', '2005-07-14', 'Purok Paghidaet 1&2 Panay Santo Nino South Cotabato', NULL, 1, NULL, '368342', '2025-07-11 17:49:57', '2025-07-11 15:27:31', '2025-07-11 15:39:57'),
-(7, 3, 'Stepanot', 'artiedastephany@gmail.com', 'stepanot123', '09555113835', 'Stephany', '', 'Artieda', 'Other', '2025-07-16', 'Ufhc', NULL, 1, '2025-07-12 23:43:00', NULL, NULL, '2025-07-12 15:07:55', '2025-07-12 15:43:00'),
-(8, 3, 'Alimar', 'baguanshalimar1@gmail.com', 'alimar123', '09978740592', 'Shalimar', 'P', 'Baguan', 'Male', '2002-02-06', 'Poblacion president quirino sultan kudarat', NULL, 1, NULL, '390358', '2025-07-21 15:04:50', '2025-07-21 12:50:35', '2025-07-21 12:54:50'),
-(9, 3, 'Nicko', 'nickokundi@gmail.com', 'nicko123', '09932603608', 'Nicko', 'K', 'Navarro', 'Male', '2003-12-09', 'Datu paglas', NULL, 1, NULL, '419840', '2025-07-21 15:03:58', '2025-07-21 12:50:55', '2025-07-21 12:53:58');
+(1, 1, 'admin', 'penafielliezl1122@gmail.com', 'admin123', NULL, 'System', NULL, 'Admin', 'Other', NULL, NULL, NULL, 1, '2025-11-12 17:18:32', NULL, NULL, '2025-07-09 12:04:56', '2025-11-12 09:18:32'),
+(15, 2, 'testnurse', 'janrusselpenafiel01172005@gmail.com', 'testnurse', '09677726912', 'testname', 'testmidname', 'testlastname', 'Male', NULL, 'testadrress', NULL, 1, '2025-11-11 18:34:08', NULL, NULL, '2025-08-23 06:31:05', '2025-11-11 10:34:08'),
+(18, 3, 'testpatient', 'penafielliezl9999@gmail.com', 'testpatient', '09677726912', 'testpatientname', 'testpatientmidname', 'testpatientlastname', 'Male', '2005-01-20', 'testaddress1', NULL, 1, '2025-11-11 18:42:14', NULL, NULL, '2025-08-23 07:12:34', '2025-11-11 10:42:14');
 
 -- --------------------------------------------------------
 
@@ -446,7 +410,7 @@ ALTER TABLE `user_roles`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `appointment_status`
@@ -458,13 +422,13 @@ ALTER TABLE `appointment_status`
 -- AUTO_INCREMENT for table `health_workers`
 --
 ALTER TABLE `health_workers`
-  MODIFY `health_worker_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `health_worker_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `immunization_records`
 --
 ALTER TABLE `immunization_records`
-  MODIFY `immunization_record_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `immunization_record_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `immunization_types`
@@ -482,25 +446,25 @@ ALTER TABLE `medical_records`
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `settings`
 --
 ALTER TABLE `settings`
-  MODIFY `setting_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=86;
+  MODIFY `setting_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
 
 --
 -- AUTO_INCREMENT for table `sms_logs`
 --
 ALTER TABLE `sms_logs`
-  MODIFY `sms_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `sms_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `user_roles`
