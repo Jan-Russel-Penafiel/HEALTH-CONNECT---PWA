@@ -24,23 +24,50 @@ A Progressive Web Application (PWA) for managing health services at the Barangay
 
 ## Installation
 
+### For Development
+
 1. Clone the repository to your XAMPP htdocs folder:
    ```bash
    git clone https://github.com/yourusername/healthconnect.git
    ```
 
-2. Import the database:
+2. Install PHP dependencies:
+   ```bash
+   cd healthconnect
+   composer install
+   ```
+
+3. Import the database:
    - Open phpMyAdmin
    - Create a new database named 'healthconnect'
    - Import the `healthconnect.sql` file
 
-3. Configure the database connection:
+4. Configure the database connection:
    - Navigate to `includes/config/database.php`
    - Update the database credentials if needed
 
-4. Access the application:
+5. Access the application:
    - Open your browser and navigate to `http://localhost/connect`
    - For PWA installation, use HTTPS in production
+
+### For Deployment
+
+To create a lightweight deployment package:
+
+```powershell
+.\create-deployment-package.ps1
+```
+
+This creates a small zip file (~2-3MB instead of 100MB+) by excluding:
+- `vendor/` directory (regenerated with `composer install`)
+- Large document files (.pptx, .pdf, .docx)
+- Development files (.git, .vscode)
+
+On the target server:
+1. Extract the deployment package
+2. Run `composer install` to install PHP dependencies
+3. Configure database connection
+4. Set up web server
 
 ## Project Structure
 
