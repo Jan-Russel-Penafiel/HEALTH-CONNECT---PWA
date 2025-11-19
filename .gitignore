@@ -20,7 +20,11 @@ Thumbs.db
 # PHP specific
 vendor/
 composer.phar
+composer.lock
 .env
+
+# Large directories that can be regenerated
+node_modules/
 
 # Temporary files
 *.tmp
@@ -30,3 +34,24 @@ composer.phar
 # Backup files
 *.bak
 *.backup
+
+# Document files (usually large and not needed in repository)
+*.pptx
+*.ppt
+*.pdf
+*.docx
+*.doc
+*.xlsx
+*.xls
+
+# Large media files
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.ico
