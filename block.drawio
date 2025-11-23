@@ -1,0 +1,82 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.0.3 Chrome/140.0.7339.249 Electron/38.7.0 Safari/537.36" version="29.0.3">
+  <diagram name="Page-1" id="90a13364-a465-7bf4-72fc-28e22215d7a0">
+    <mxGraphModel dx="872" dy="563" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1.5" pageWidth="1169" pageHeight="826" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0" style=";html=1;" />
+        <mxCell id="1" style=";html=1;" parent="0" />
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5hdepdvP0_2cit1RXv3Z-1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="650" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-1" value="AUTHENTICATION" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="390" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-3" value="SET APPOINTMENT" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="500" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="5hdepdvP0_2cit1RXv3Z-6" target="5hdepdvP0_2cit1RXv3Z-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-6" value="RECEIVE SMS NOTIFICATION" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="680" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-10" value="PRINT APPOINTMENT SLIP" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="680" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="5hdepdvP0_2cit1RXv3Z-12" target="5hdepdvP0_2cit1RXv3Z-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-12" value="&amp;nbsp;INPUT MEDICAL RECORD" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="500" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5hdepdvP0_2cit1RXv3Z-15">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1000" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-15" value="IMMUNIZATION" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="390" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="5hdepdvP0_2cit1RXv3Z-19" target="5hdepdvP0_2cit1RXv3Z-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1100" y="530" />
+              <mxPoint x="1100" y="340" />
+              <mxPoint x="650" y="340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-19" value="END SESSION" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="940" y="500" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="5hdepdvP0_2cit1RXv3Z-21" target="5hdepdvP0_2cit1RXv3Z-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-21" value="Approved &#xa;Appointment" style="rhombus;fontColor=default;" vertex="1" parent="1">
+          <mxGeometry x="570" y="590" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-26" value="" style="endArrow=none;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" edge="1" parent="1" source="5hdepdvP0_2cit1RXv3Z-21">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="610" as="sourcePoint" />
+            <mxPoint x="650" y="560" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-37" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" target="5hdepdvP0_2cit1RXv3Z-12">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="840" y="590" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-38" value="" style="endArrow=none;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" edge="1" parent="1" source="5hdepdvP0_2cit1RXv3Z-10">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="790" y="700" as="sourcePoint" />
+            <mxPoint x="840" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5hdepdvP0_2cit1RXv3Z-39" value="Medical Consultation" style="rhombus;fontColor=default;" vertex="1" parent="1">
+          <mxGeometry x="760" y="590" width="160" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

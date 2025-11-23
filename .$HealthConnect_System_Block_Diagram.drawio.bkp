@@ -1,0 +1,273 @@
+<mxfile host="app.diagrams.net" modified="2025-11-21T00:00:00.000Z" agent="5.0" etag="abc123" version="24.7.17" type="device">
+  <diagram name="HealthConnect System Block Diagram" id="healthconnect-system">
+    <mxGraphModel dx="2074" dy="1196" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="HealthConnect PWA System - Block Diagram" style="rounded=0;whiteSpace=wrap;html=1;fontSize=16;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="400" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- 1. User Interface Layer -->
+        <mxCell id="layer1" value="1. USER INTERFACE LAYER" style="rounded=0;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="100" y="80" width="1000" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mobileWeb" value="Mobile Browser" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="110" width="120" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="desktopWeb" value="Desktop Browser" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="300" y="110" width="120" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pwaClient" value="PWA App" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="450" y="110" width="120" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- 2. Presentation Layer -->
+        <mxCell id="layer2" value="2. PRESENTATION LAYER" style="rounded=0;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="100" y="190" width="1000" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pwaMani" value="PWA Components" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="220" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="navigation" value="Navigation System" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="300" y="220" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="forms" value="Forms & UI" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="450" y="220" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="staticAssets" value="Static Assets (CSS, JS, Images)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="260" width="420" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- 3. Application Layer -->
+        <mxCell id="layer3" value="3. APPLICATION LAYER" style="rounded=0;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="100" y="320" width="1000" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="adminDash" value="Admin Dashboard" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="350" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="healthWorker" value="Health Worker Interface" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="300" y="350" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="patientInt" value="Patient Interface" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="450" y="350" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="authSession" value="Authentication & Session Management" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="390" width="420" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- 4. API Layer -->
+        <mxCell id="layer4" value="4. API LAYER" style="rounded=0;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="100" y="470" width="1000" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="patientsApi" value="Patients API" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="500" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="appointmentsApi" value="Appointments API" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="300" y="500" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="immunizationApi" value="Immunization API" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="450" y="500" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="inputValidation" value="Input Validation & Security" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="540" width="420" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- 5. Business Logic Layer -->
+        <mxCell id="layer5" value="5. BUSINESS LOGIC LAYER" style="rounded=0;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="100" y="600" width="1000" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="patientMgmt" value="Patient Management" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="630" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="appointmentSched" value="Appointment Scheduling" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="300" y="630" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="immunizationTrack" value="Immunization Tracking" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="450" y="630" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="reportsGen" value="Reports Generation" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="600" y="630" width="120" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- 6. Data Access Layer -->
+        <mxCell id="layer6" value="6. DATA ACCESS LAYER" style="rounded=0;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="100" y="710" width="1000" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dbConnection" value="Database Connection (PDO)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="740" width="200" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dbSecurity" value="Security & Transactions" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="370" y="740" width="200" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- 7. Database Layer -->
+        <mxCell id="layer7" value="7. DATABASE LAYER (MySQL)" style="rounded=0;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="100" y="800" width="1000" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Database Tables Row 1 -->
+        <mxCell id="usersTable" value="Users Table" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="830" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="patientsTable" value="Patients Table" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="270" y="830" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="appointmentsTable" value="Appointments Table" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="390" y="830" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="immunizationTable" value="Immunization Table" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="510" y="830" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Database Tables Row 2 -->
+        <mxCell id="medicalRecords" value="Medical Records" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="870" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="healthPrograms" value="Health Programs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="270" y="870" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="reportsTable" value="Reports Table" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="390" y="870" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="logsTable" value="System Logs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="510" y="870" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- 8. External Services -->
+        <mxCell id="layer8" value="8. EXTERNAL SERVICES" style="rounded=0;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="100" y="950" width="1000" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="smsGateway" value="SMS Service" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="980" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="emailService" value="Email Service" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="300" y="980" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pdfQrCode" value="PDF/QR Generation" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="450" y="980" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- 9. Infrastructure -->
+        <mxCell id="layer9" value="9. INFRASTRUCTURE" style="rounded=0;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1040" width="1000" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="webServer" value="Web Server (Apache)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="150" y="1070" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="phpRuntime" value="PHP Runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="300" y="1070" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dbServer" value="Database Server" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="450" y="1070" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Data Flow Arrows -->
+        <mxCell id="arrow1" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="160" as="sourcePoint" />
+            <mxPoint x="400" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow2" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="290" as="sourcePoint" />
+            <mxPoint x="400" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow3" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="440" as="sourcePoint" />
+            <mxPoint x="400" y="470" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow4" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="570" as="sourcePoint" />
+            <mxPoint x="400" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow5" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="680" as="sourcePoint" />
+            <mxPoint x="400" y="710" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow6" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="770" as="sourcePoint" />
+            <mxPoint x="400" y="800" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- External Service Connections -->
+        <mxCell id="extArrow1" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#666666;strokeWidth=1;dashed=1;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="570" y="650" as="sourcePoint" />
+            <mxPoint x="210" y="980" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="extArrow2" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#666666;strokeWidth=1;dashed=1;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="570" y="640" as="sourcePoint" />
+            <mxPoint x="360" y="980" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="extArrow3" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#666666;strokeWidth=1;dashed=1;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="570" y="630" as="sourcePoint" />
+            <mxPoint x="510" y="980" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- System Info Box -->
+        <mxCell id="systemInfo" value="SYSTEM INFORMATION&#xa;&#xa;Technology Stack:&#xa;• Frontend: HTML5, CSS3, JavaScript&#xa;• Backend: PHP 8.0+&#xa;• Database: MySQL&#xa;• PWA: Service Workers, Manifest&#xa;• Security: HTTPS, Input Validation&#xa;• External: SMS, Email, PDF Services" style="rounded=0;whiteSpace=wrap;html=1;fontSize=10;fillColor=none;strokeColor=#000000;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="750" y="200" width="300" height="120" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

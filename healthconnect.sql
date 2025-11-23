@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 11, 2025 at 11:43 AM
+-- Generation Time: Nov 19, 2025 at 05:51 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -290,9 +290,9 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`user_id`, `role_id`, `username`, `email`, `password`, `mobile_number`, `first_name`, `middle_name`, `last_name`, `gender`, `date_of_birth`, `address`, `profile_picture`, `is_active`, `last_login`, `otp`, `otp_expiry`, `created_at`, `updated_at`) VALUES
-(1, 1, 'admin', 'penafielliezl1122@gmail.com', 'admin123', NULL, 'System', NULL, 'Admin', 'Other', NULL, NULL, NULL, 1, '2025-11-12 17:18:32', NULL, NULL, '2025-07-09 12:04:56', '2025-11-12 09:18:32'),
-(15, 2, 'testnurse', 'janrusselpenafiel01172005@gmail.com', 'testnurse', '09677726912', 'testname', 'testmidname', 'testlastname', 'Male', NULL, 'testadrress', NULL, 1, '2025-11-11 18:34:08', NULL, NULL, '2025-08-23 06:31:05', '2025-11-11 10:34:08'),
-(18, 3, 'testpatient', 'penafielliezl9999@gmail.com', 'testpatient', '09677726912', 'testpatientname', 'testpatientmidname', 'testpatientlastname', 'Male', '2005-01-20', 'testaddress1', NULL, 1, '2025-11-11 18:42:14', NULL, NULL, '2025-08-23 07:12:34', '2025-11-11 10:42:14');
+(1, 1, 'admin', 'penafielliezl1122@gmail.com', 'admin123', NULL, 'System', NULL, 'Admin', 'Other', NULL, NULL, NULL, 1, '2025-11-15 22:43:43', NULL, NULL, '2025-07-09 12:04:56', '2025-11-15 14:43:43'),
+(15, 2, 'testnurse', 'janrusselpenafiel01172005@gmail.com', 'testnurse', '09677726912', 'testname', 'testmidname', 'testlastname', 'Male', NULL, 'testadrress', NULL, 1, '2025-11-15 22:51:47', NULL, NULL, '2025-08-23 06:31:05', '2025-11-15 14:51:47'),
+(18, 3, 'testpatient', 'penafielliezl9999@gmail.com', 'testpatient', '09677726912', 'testpatientname', 'testpatientmidname', 'testpatientlastname', 'Male', '2005-01-20', 'testaddress1', NULL, 1, '2025-11-15 22:55:07', NULL, NULL, '2025-08-23 07:12:34', '2025-11-15 14:55:07');
 
 -- --------------------------------------------------------
 

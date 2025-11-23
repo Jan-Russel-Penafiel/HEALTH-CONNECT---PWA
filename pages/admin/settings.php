@@ -215,61 +215,6 @@ $settings = array_merge($defaultSettings, $settings);
                         </div>
                     </div>
                 </div>
-
-                <div id="sms_settings" class="notification-settings" style="display: none;">
-                    <h4>SMS Gateway Settings</h4>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="sms_api_key">API Key</label>
-                            <input type="password" class="form-control" id="sms_api_key" name="sms_api_key"
-                                   value="<?php echo htmlspecialchars($settings['sms_api_key'] ?? ''); ?>">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="sms_sender_id">Sender ID</label>
-                            <input type="text" class="form-control" id="sms_sender_id" name="sms_sender_id"
-                                   value="<?php echo htmlspecialchars($settings['sms_sender_id'] ?? ''); ?>">
-                        </div>
-                    </div>
-                </div>
-
-                <div id="email_settings" class="notification-settings" style="display: none;">
-                    <h4>SMTP Settings</h4>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="smtp_host">SMTP Host</label>
-                            <input type="text" class="form-control" id="smtp_host" name="smtp_host"
-                                   value="<?php echo htmlspecialchars($settings['smtp_host'] ?? ''); ?>">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="smtp_port">SMTP Port</label>
-                            <input type="number" class="form-control" id="smtp_port" name="smtp_port"
-                                   value="<?php echo htmlspecialchars($settings['smtp_port'] ?? '587'); ?>">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="smtp_username">SMTP Username</label>
-                            <input type="text" class="form-control" id="smtp_username" name="smtp_username"
-                                   value="<?php echo htmlspecialchars($settings['smtp_username'] ?? ''); ?>">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="smtp_password">SMTP Password</label>
-                            <input type="password" class="form-control" id="smtp_password" name="smtp_password"
-                                   placeholder="Leave blank to keep current password">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="smtp_encryption">Encryption</label>
-                            <select class="form-control" id="smtp_encryption" name="smtp_encryption">
-                                <option value="tls" <?php echo ($settings['smtp_encryption'] ?? 'tls') === 'tls' ? 'selected' : ''; ?>>TLS</option>
-                                <option value="ssl" <?php echo ($settings['smtp_encryption'] ?? '') === 'ssl' ? 'selected' : ''; ?>>SSL</option>
-                                <option value="none" <?php echo ($settings['smtp_encryption'] ?? '') === 'none' ? 'selected' : ''; ?>>None</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div class="form-actions">
@@ -279,24 +224,6 @@ $settings = array_merge($defaultSettings, $settings);
         </form>
     </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const smsToggle = document.getElementById('enable_sms_notifications');
-        const emailToggle = document.getElementById('enable_email_notifications');
-        const smsSettings = document.getElementById('sms_settings');
-        const emailSettings = document.getElementById('email_settings');
 
-        function toggleSettings() {
-            smsSettings.style.display = smsToggle.checked ? 'block' : 'none';
-            emailSettings.style.display = emailToggle.checked ? 'block' : 'none';
-        }
-
-        smsToggle.addEventListener('change', toggleSettings);
-        emailToggle.addEventListener('change', toggleSettings);
-
-        // Initial toggle
-        toggleSettings();
-    });
-    </script>
 </body>
 </html> 
