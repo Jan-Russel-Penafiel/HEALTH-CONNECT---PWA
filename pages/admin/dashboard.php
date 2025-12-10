@@ -19,7 +19,8 @@ $stats = [
     'appointments_this_month' => 0,
     'patients_today' => 0,
     'patients_this_week' => 0,
-    'patients_this_month' => 0
+    'patients_this_month' => 0,
+    'medical_records_total' => 0
 ];
 $recent_activities = [];
 $error_message = '';
@@ -131,6 +132,11 @@ try {
     if ($stats['patients_this_month'] == 0) {
         $stats['patients_this_month'] = $total_patients;
     }
+
+    // Get total medical records count
+    $query = "SELECT COUNT(*) as count FROM medical_records";
+    $stmt = $conn->query($query);
+    $stats['medical_records_total'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
     // Get recent activities (appointments)
     $query = "SELECT 
@@ -418,6 +424,12 @@ try {
                 <i class="fas fa-user-friends"></i>
                 <h3>Total Patients</h3>
                 <p><?php echo number_format($stats['patients_this_month']); ?></p>
+            </div>
+            
+            <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='medical_records.php'">
+                <i class="fas fa-file-medical"></i>
+                <h3>Total Medical Records</h3>
+                <p><?php echo number_format($stats['medical_records_total']); ?></p>
             </div>
         </div>
 

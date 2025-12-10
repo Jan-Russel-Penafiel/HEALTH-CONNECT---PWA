@@ -32,7 +32,8 @@ $stats = [
     'appointments_this_month' => 0,
     'patients_today' => 0,
     'patients_this_week' => 0,
-    'patients_this_month' => 0
+    'patients_this_month' => 0,
+    'medical_records_total' => 0
 ];
 
 // Data for charts
@@ -118,6 +119,12 @@ try {
     $stmt = $pdo->prepare($query);
     $stmt->execute([$health_worker_id]);
     $stats['patients_this_month'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+    // Get total medical records count for this health worker
+    $query = "SELECT COUNT(*) as count FROM medical_records WHERE health_worker_id = ?";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$health_worker_id]);
+    $stats['medical_records_total'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
     // Get daily appointments for the last 7 days
     $query = "SELECT 
@@ -435,6 +442,12 @@ try {
                 <i class="fas fa-user-friends"></i>
                 <h3>Patients This Month</h3>
                 <p class="number"><?php echo number_format($stats['patients_this_month']); ?></p>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-file-medical"></i>
+                <h3>Total Medical Records</h3>
+                <p class="number"><?php echo number_format($stats['medical_records_total']); ?></p>
             </div>
         </div>
 
