@@ -92,18 +92,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $role_condition = " AND r.role_name = :role_filter";
             }
             
-            // Check if username and password match
+            // Check if username exists
             $query = "SELECT u.user_id, u.email, u.username, u.password, r.role_name, u.first_name, u.last_name, u.mobile_number,
                       CASE WHEN r.role_name = 'patient' THEN 
                         (SELECT is_approved FROM patients p WHERE p.user_id = u.user_id)
                       ELSE 1 END as is_approved
                       FROM users u
                       JOIN user_roles r ON u.role_id = r.role_id
-                      WHERE u.username = :username AND u.password = :password AND u.is_active = 1" . $role_condition;
+                      WHERE u.username = :username AND u.is_active = 1" . $role_condition;
             
             $stmt = $conn->prepare($query);
             $stmt->bindParam(":username", $username);
-            $stmt->bindParam(":password", $password);
             if (!empty($role_filter)) {
                 $stmt->bindParam(":role_filter", $role_filter);
             }
@@ -112,10 +111,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if ($stmt->rowCount() > 0) {
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                // Check if patient is approved
-                if ($row['role_name'] === 'patient' && !$row['is_approved']) {
-                    $error = "Your account is pending approval. Please wait for admin approval.";
-                } else {
+                // Verify password
+                if (password_verify($password, $row['password'])) {
+                    // Check if patient is approved
+                    if ($row['role_name'] === 'patient' && !$row['is_approved']) {
+                        $error = "Your account is pending approval. Please wait for admin approval.";
+                    } else {
                     // Update last login and set session
                     $update_query = "UPDATE users SET last_login = NOW() WHERE user_id = :user_id";
                     $update_stmt = $conn->prepare($update_query);
@@ -138,6 +139,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         header("Location: patient/dashboard.php");
                     }
                     exit;
+                    }
+                } else {
+                    $error = "Invalid password";
                 }
             } else {
                 if (!empty($role_filter)) {

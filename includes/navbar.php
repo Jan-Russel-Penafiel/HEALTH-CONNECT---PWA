@@ -27,6 +27,10 @@ $is_health_worker = isset($_SESSION['role']) && $_SESSION['role'] === 'health_wo
                     <i class="fas fa-users"></i>
                     <span>Patients</span>
                 </a>
+                <a href="/connect/pages/admin/medical_records.php" class="nav-link <?php echo $current_page === 'medical_records.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-notes-medical"></i>
+                    <span>Records</span>
+                </a>
                 <a href="/connect/pages/admin/reports.php" class="nav-link <?php echo $current_page === 'reports.php' ? 'active' : ''; ?>">
                     <i class="fas fa-file-alt"></i>
                     <span>Reports</span>
@@ -135,9 +139,9 @@ $is_health_worker = isset($_SESSION['role']) && $_SESSION['role'] === 'health_wo
         <i class="fas fa-users"></i>
         <span>Patients</span>
     </a>
-    <a href="/connect/pages/admin/reports.php" class="nav-item <?php echo $current_page === 'reports.php' ? 'active' : ''; ?>">
-        <i class="fas fa-file-alt"></i>
-        <span>Reports</span>
+    <a href="/connect/pages/admin/medical_records.php" class="nav-item <?php echo $current_page === 'medical_records.php' ? 'active' : ''; ?>">
+        <i class="fas fa-notes-medical"></i>
+        <span>Records</span>
     </a>
     <a href="/connect/pages/admin/settings.php" class="nav-item <?php echo $current_page === 'settings.php' ? 'active' : ''; ?>">
         <i class="fas fa-cog"></i>

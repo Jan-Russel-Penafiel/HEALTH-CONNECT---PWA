@@ -136,15 +136,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
                 
-            case 'delete':
+            case 'archive':
                 try {
-                    $query = "DELETE FROM users WHERE user_id = :user_id";
+                    $query = "UPDATE users SET is_active = 0 WHERE user_id = :user_id";
                     $stmt = $conn->prepare($query);
                     $stmt->execute([':user_id' => $_POST['user_id']]);
-                    $_SESSION['success'] = "Health worker deleted successfully.";
+                    $_SESSION['success'] = "Health worker archived successfully.";
                 } catch (PDOException $e) {
-                    error_log("Error deleting health worker: " . $e->getMessage());
-                    $_SESSION['error'] = "Error deleting health worker. Please try again.";
+                    error_log("Error archiving health worker: " . $e->getMessage());
+                    $_SESSION['error'] = "Error archiving health worker. Please try again.";
+                }
+                break;
+                
+            case 'restore':
+                try {
+                    $query = "UPDATE users SET is_active = 1 WHERE user_id = :user_id";
+                    $stmt = $conn->prepare($query);
+                    $stmt->execute([':user_id' => $_POST['user_id']]);
+                    $_SESSION['success'] = "Health worker restored successfully.";
+                } catch (PDOException $e) {
+                    error_log("Error restoring health worker: " . $e->getMessage());
+                    $_SESSION['error'] = "Error restoring health worker. Please try again.";
                 }
                 break;
         }
@@ -158,10 +170,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get search parameter
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
+// Get filter parameter (show archived or not)
+$show_archived = isset($_GET['show_archived']) ? $_GET['show_archived'] === '1' : false;
+
 // Fetch health workers with search functionality
 try {
     $params = [];
     $whereClause = "u.role_id = (SELECT role_id FROM user_roles WHERE role_name = 'health_worker')";
+    
+    // Filter by active status
+    if ($show_archived) {
+        $whereClause .= " AND u.is_active = 0";
+    } else {
+        $whereClause .= " AND u.is_active = 1";
+    }
     
     if (!empty($search)) {
         $whereClause .= " AND (
@@ -503,17 +525,26 @@ try {
             <form class="search-form" method="GET">
                 <div class="search-input-container">
                     <input type="text" name="search" class="search-input" placeholder="Search across all fields..." value="<?php echo htmlspecialchars($search); ?>">
+                    <input type="hidden" name="show_archived" value="<?php echo $show_archived ? '1' : '0'; ?>">
                     
                     <button type="submit" class="search-button">
                         <i class="fas fa-search"></i>
                     </button>
                 </div>
                 
-                <?php if (!empty($search)): ?>
-                    <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="search-reset">
-                        <i class="fas fa-times"></i> Reset Search
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <?php if (!empty($search)): ?>
+                        <a href="<?php echo $_SERVER['PHP_SELF'] . ($show_archived ? '?show_archived=1' : ''); ?>" class="search-reset">
+                            <i class="fas fa-times"></i> Reset Search
+                        </a>
+                    <?php endif; ?>
+                    
+                    <a href="?show_archived=<?php echo $show_archived ? '0' : '1'; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" 
+                       class="search-reset" style="background: <?php echo $show_archived ? '#28a745' : '#6c757d'; ?>">
+                        <i class="fas fa-<?php echo $show_archived ? 'users' : 'archive'; ?>"></i> 
+                        <?php echo $show_archived ? 'Show Active Workers' : 'Show Archived Workers'; ?>
                     </a>
-                <?php endif; ?>
+                </div>
                 
                 <?php if (!empty($search)): ?>
                     <div class="search-results-info">
@@ -559,12 +590,18 @@ try {
                                 <td><?php echo htmlspecialchars($worker['address'] ? $worker['address'] : 'No address provided'); ?></td>
                                 <td>
                                     <div class="table-actions">
+                                        <?php if (!$show_archived): ?>
                                         <button class="btn-action btn-edit" onclick="showEditModal(<?php echo htmlspecialchars(json_encode($worker)); ?>)">
                                             <i class="fas fa-edit"></i> Edit
                                         </button>
-                                        <button class="btn-action btn-delete" onclick="confirmDelete(<?php echo $worker['user_id']; ?>)">
-                                            <i class="fas fa-trash"></i> Delete
+                                        <button class="btn-action btn-delete" onclick="confirmArchive(<?php echo $worker['user_id']; ?>)">
+                                            <i class="fas fa-archive"></i> Archive
                                         </button>
+                                        <?php else: ?>
+                                        <button class="btn-action btn-edit" style="background: #28a745;" onclick="confirmRestore(<?php echo $worker['user_id']; ?>)">
+                                            <i class="fas fa-undo"></i> Restore
+                                        </button>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -628,12 +665,18 @@ try {
                         </div>
                         
                         <div class="actions">
+                            <?php if (!$show_archived): ?>
                             <button class="btn-action btn-edit" onclick="showEditModal(<?php echo htmlspecialchars(json_encode($worker)); ?>)">
                                 <i class="fas fa-edit"></i> Edit
                             </button>
-                            <button class="btn-action btn-delete" onclick="confirmDelete(<?php echo $worker['user_id']; ?>)">
-                                <i class="fas fa-trash"></i> Delete
+                            <button class="btn-action btn-delete" onclick="confirmArchive(<?php echo $worker['user_id']; ?>)">
+                                <i class="fas fa-archive"></i> Archive
                             </button>
+                            <?php else: ?>
+                            <button class="btn-action btn-edit" style="background: #28a745;" onclick="confirmRestore(<?php echo $worker['user_id']; ?>)">
+                                <i class="fas fa-undo"></i> Restore
+                            </button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -797,12 +840,25 @@ try {
             modal.style.display = 'none';
         }
         
-        function confirmDelete(userId) {
-            if (confirm('Are you sure you want to delete this health worker?')) {
+        function confirmArchive(userId) {
+            if (confirm('Are you sure you want to archive this health worker? They will be marked as inactive.')) {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.innerHTML = `
-                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="action" value="archive">
+                    <input type="hidden" name="user_id" value="${userId}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        function confirmRestore(userId) {
+            if (confirm('Are you sure you want to restore this health worker? They will be marked as active.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="restore">
                     <input type="hidden" name="user_id" value="${userId}">
                 `;
                 document.body.appendChild(form);

@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':role_id' => $role_id,
                         ':username' => $_POST['username'],
                         ':email' => $_POST['email'],
-                        ':password' => $_POST['password'],
+                        ':password' => password_hash($_POST['password'], PASSWORD_DEFAULT),
                         ':mobile_number' => $_POST['mobile_number'],
                         ':first_name' => $_POST['first_name'],
                         ':middle_name' => $_POST['middle_name'],

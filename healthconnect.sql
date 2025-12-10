@@ -287,12 +287,14 @@ CREATE TABLE `users` (
 
 --
 -- Dumping data for table `users`
+-- NOTE: All passwords are encrypted using bcrypt (password_hash with PASSWORD_DEFAULT)
+-- Default passwords: admin123, testnurse, testpatient
 --
 
 INSERT INTO `users` (`user_id`, `role_id`, `username`, `email`, `password`, `mobile_number`, `first_name`, `middle_name`, `last_name`, `gender`, `date_of_birth`, `address`, `profile_picture`, `is_active`, `last_login`, `otp`, `otp_expiry`, `created_at`, `updated_at`) VALUES
-(1, 1, 'admin', 'alladinantolin@gmail.com', 'admin123', '09658612537', 'System', NULL, 'Admin', 'Other', NULL, NULL, NULL, 1, '2025-11-25 22:05:46', NULL, NULL, '2025-07-09 12:04:56', '2025-11-29 08:54:54'),
-(15, 2, 'testnurse', 'mohidinmabang@gmail.com\n', 'testnurse', '09946964048', 'testname', 'testmidname', 'testlastname', 'Male', NULL, 'testadrress', NULL, 1, '2025-11-25 22:07:01', NULL, NULL, '2025-08-23 06:31:05', '2025-11-29 08:55:13'),
-(18, 3, 'testpatient', 'NickoNavarro876@gmail.com', 'testpatient', '09534990198', 'testpatientname', 'testpatientmidname', 'testpatientlastname', 'Male', '2005-01-20', 'testaddress1', NULL, 1, '2025-11-25 22:05:06', NULL, NULL, '2025-08-23 07:12:34', '2025-11-29 08:56:23');
+(1, 1, 'admin', 'alladinantolin@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '09658612537', 'System', NULL, 'Admin', 'Other', NULL, NULL, NULL, 1, '2025-11-25 22:05:46', NULL, NULL, '2025-07-09 12:04:56', '2025-11-29 08:54:54'),
+(15, 2, 'testnurse', 'mohidinmabang@gmail.com\n', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '09946964048', 'testname', 'testmidname', 'testlastname', 'Male', NULL, 'testadrress', NULL, 1, '2025-11-25 22:07:01', NULL, NULL, '2025-08-23 06:31:05', '2025-11-29 08:55:13'),
+(18, 3, 'testpatient', 'NickoNavarro876@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '09534990198', 'testpatientname', 'testpatientmidname', 'testpatientlastname', 'Male', '2005-01-20', 'testaddress1', NULL, 1, '2025-11-25 22:05:06', NULL, NULL, '2025-08-23 07:12:34', '2025-11-29 08:56:23');
 
 -- --------------------------------------------------------
 

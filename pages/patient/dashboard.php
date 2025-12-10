@@ -14,6 +14,10 @@ $recent_records = [];
 $due_vaccines = [];
 $error_message = null;
 
+// Data for charts
+$monthly_appointments = [];
+$monthly_records = [];
+
 try {
     $database = new Database();
     $conn = $database->getConnection();
@@ -55,6 +59,54 @@ try {
     $stmt = $conn->prepare($query);
     $stmt->execute([':patient_id' => $patient['patient_id']]);
     $counts['immunizations'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Get monthly appointments for the last 6 months
+    $query = "SELECT 
+                DATE_FORMAT(appointment_date, '%Y-%m') as month, 
+                COUNT(*) as count 
+              FROM appointments 
+              WHERE patient_id = :patient_id
+              AND appointment_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+              GROUP BY DATE_FORMAT(appointment_date, '%Y-%m')
+              ORDER BY month";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([':patient_id' => $patient['patient_id']]);
+    $monthly_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Initialize last 6 months with zero counts
+    for ($i = 5; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i months"));
+        $monthly_appointments[$month] = 0;
+    }
+    
+    // Fill in actual data
+    foreach ($monthly_data as $data) {
+        $monthly_appointments[$data['month']] = (int)$data['count'];
+    }
+
+    // Get monthly medical records for the last 6 months
+    $query = "SELECT 
+                DATE_FORMAT(visit_date, '%Y-%m') as month, 
+                COUNT(*) as count 
+              FROM medical_records 
+              WHERE patient_id = :patient_id
+              AND visit_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+              GROUP BY DATE_FORMAT(visit_date, '%Y-%m')
+              ORDER BY month";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([':patient_id' => $patient['patient_id']]);
+    $monthly_record_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Initialize last 6 months with zero counts
+    for ($i = 5; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i months"));
+        $monthly_records[$month] = 0;
+    }
+    
+    // Fill in actual data
+    foreach ($monthly_record_data as $data) {
+        $monthly_records[$data['month']] = (int)$data['count'];
+    }
 
     // Get upcoming appointments
     $query = "SELECT a.*, 
@@ -225,11 +277,17 @@ try {
             padding: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             text-align: center;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            display: block;
+            color: inherit;
         }
 
         .stat-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            text-decoration: none;
+            cursor: pointer;
         }
 
         .stat-card i {
@@ -366,23 +424,23 @@ try {
         </div>
 
         <div class="stats-grid">
-            <div class="stat-card">
+            <a href="appointments.php" class="stat-card">
                 <i class="fas fa-calendar-check"></i>
                 <h3>Appointments</h3>
                 <p><?php echo number_format($counts['appointments']); ?></p>
-            </div>
+            </a>
             
-            <div class="stat-card">
+            <a href="medical_history.php" class="stat-card">
                 <i class="fas fa-notes-medical"></i>
                 <h3>Medical Records</h3>
                 <p><?php echo number_format($counts['medical_records']); ?></p>
-            </div>
+            </a>
             
-            <div class="stat-card">
+            <a href="immunization.php" class="stat-card">
                 <i class="fas fa-syringe"></i>
                 <h3>Immunizations</h3>
                 <p><?php echo number_format($counts['immunizations']); ?></p>
-            </div>
+            </a>
         </div>
 
             <!-- Upcoming Appointments -->
@@ -421,6 +479,20 @@ try {
             </div>
 
         <!-- Charts Section -->
+        <div class="charts-grid">
+            <!-- Monthly Appointments Chart -->
+            <div class="chart-container">
+                <h3 class="chart-title">Appointments (Last 6 Months)</h3>
+                <canvas id="monthlyAppointmentsChart"></canvas>
+            </div>
+            
+            <!-- Monthly Medical Records Chart -->
+            <div class="chart-container">
+                <h3 class="chart-title">Medical Records (Last 6 Months)</h3>
+                <canvas id="monthlyRecordsChart"></canvas>
+            </div>
+        </div>
+
         <div class="charts-grid">
             <!-- Recent Medical Records -->
             <div class="chart-container">
@@ -499,5 +571,82 @@ try {
     </div>
 
     <?php include __DIR__ . '/../../includes/footer.php'; ?>
+
+    <script>
+        // Chart.js initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Monthly Appointments Chart
+            const monthlyAppointmentsCtx = document.getElementById('monthlyAppointmentsChart').getContext('2d');
+            const monthlyAppointmentsChart = new Chart(monthlyAppointmentsCtx, {
+                type: 'bar',
+                data: {
+                    labels: <?php echo json_encode(array_map(function($month) {
+                        return date('M Y', strtotime($month . '-01'));
+                    }, array_keys($monthly_appointments))); ?>,
+                    datasets: [{
+                        label: 'Appointments',
+                        data: <?php echo json_encode(array_values($monthly_appointments)); ?>,
+                        backgroundColor: 'rgba(76, 175, 80, 0.6)',
+                        borderColor: 'rgba(76, 175, 80, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            // Monthly Medical Records Chart
+            const monthlyRecordsCtx = document.getElementById('monthlyRecordsChart').getContext('2d');
+            const monthlyRecordsChart = new Chart(monthlyRecordsCtx, {
+                type: 'line',
+                data: {
+                    labels: <?php echo json_encode(array_map(function($month) {
+                        return date('M Y', strtotime($month . '-01'));
+                    }, array_keys($monthly_records))); ?>,
+                    datasets: [{
+                        label: 'Medical Records',
+                        data: <?php echo json_encode(array_values($monthly_records)); ?>,
+                        backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                        borderColor: 'rgba(33, 150, 243, 1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html> 

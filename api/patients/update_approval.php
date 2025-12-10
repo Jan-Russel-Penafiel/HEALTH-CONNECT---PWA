@@ -13,6 +13,96 @@ header('Expires: 0');
 // Include database configuration
 require_once '../../includes/config/database.php';
 
+// Include email configuration
+$emailConfig = require_once '../../includes/config/email_config.php';
+
+// Include PHPMailer
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require_once '../../vendor/autoload.php';
+
+// Function to send approval email
+function sendApprovalEmail($email, $firstName, $lastName) {
+    global $emailConfig;
+    
+    $mail = new PHPMailer(true);
+    
+    try {
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host       = $emailConfig['smtp_host'];
+        $mail->SMTPAuth   = true;
+        $mail->Username   = $emailConfig['smtp_username'];
+        $mail->Password   = $emailConfig['smtp_password'];
+        $mail->SMTPSecure = $emailConfig['smtp_secure'];
+        $mail->Port       = $emailConfig['smtp_port'];
+
+        // Recipients
+        $mail->setFrom($emailConfig['from_email'], $emailConfig['from_name']);
+        $mail->addAddress($email, $firstName . ' ' . $lastName);
+
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = 'Registration Approved - ' . $emailConfig['app_name'];
+        
+        $loginUrl = $emailConfig['app_url'] . '/pages/login.php';
+        
+        $mail->Body = '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+                .button { display: inline-block; padding: 12px 30px; background: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎉 Registration Approved!</h1>
+                </div>
+                <div class="content">
+                    <h2>Hello ' . htmlspecialchars($firstName) . ' ' . htmlspecialchars($lastName) . ',</h2>
+                    <p>Great news! Your registration with <strong>' . $emailConfig['app_name'] . '</strong> has been approved by our administrator.</p>
+                    <p>You can now access all features of your patient account, including:</p>
+                    <ul>
+                        <li>📅 Schedule appointments with health workers</li>
+                        <li>📋 View your medical records</li>
+                        <li>💉 Track your immunization history</li>
+                        <li>👤 Update your profile information</li>
+                    </ul>
+                    <p>Click the button below to log in and get started:</p>
+                    <a href="' . $loginUrl . '" class="button">Log In Now</a>
+                    <p>If you have any questions or need assistance, please contact us at ' . $emailConfig['support_email'] . '</p>
+                    <p>Thank you for choosing ' . $emailConfig['app_name'] . '!</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; ' . date('Y') . ' ' . $emailConfig['app_name'] . '. All rights reserved.</p>
+                    <p>This is an automated message, please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>';
+
+        $mail->AltBody = 'Hello ' . $firstName . ' ' . $lastName . ',\n\n' .
+                        'Great news! Your registration with ' . $emailConfig['app_name'] . ' has been approved.\n\n' .
+                        'You can now log in at: ' . $loginUrl . '\n\n' .
+                        'Thank you for choosing ' . $emailConfig['app_name'] . '!';
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log("Email could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        return false;
+    }
+}
+
 // Function to return JSON error
 function return_error($message, $code = 400) {
     http_response_code($code);
@@ -64,10 +154,40 @@ try {
     
     // Process based on approval action
     if ($is_approved) {
+        // Get patient details for email notification
+        $stmt = $conn->prepare("SELECT u.email, u.first_name, u.last_name 
+                                FROM users u 
+                                WHERE u.user_id = ?");
+        $stmt->execute([$user_id]);
+        $userDetails = $stmt->fetch(PDO::FETCH_ASSOC);
+        
         // Approve patient
         $stmt = $conn->prepare("UPDATE patients SET is_approved = 1, approved_at = CURRENT_TIMESTAMP WHERE user_id = ?");
         $stmt->execute([$user_id]);
-        echo json_encode(['success' => true, 'message' => 'Patient approved successfully', 'user_id' => $user_id]);
+        
+        // Send approval email notification
+        $emailSent = false;
+        if ($userDetails && !empty($userDetails['email'])) {
+            $emailSent = sendApprovalEmail(
+                $userDetails['email'],
+                $userDetails['first_name'],
+                $userDetails['last_name']
+            );
+        }
+        
+        $message = 'Patient approved successfully';
+        if ($emailSent) {
+            $message .= ' and notification email sent';
+        } else if ($userDetails && !empty($userDetails['email'])) {
+            $message .= ' but failed to send notification email';
+        }
+        
+        echo json_encode([
+            'success' => true, 
+            'message' => $message, 
+            'user_id' => $user_id,
+            'email_sent' => $emailSent
+        ]);
     } else if ($delete_on_disapprove) {
         // Delete patient and related records
         $conn->beginTransaction();

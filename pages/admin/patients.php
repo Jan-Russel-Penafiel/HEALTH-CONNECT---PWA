@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         ':role_id' => $role_id,
                         ':username' => $username,
                         ':email' => $email,
-                        ':password' => $password,
+                        ':password' => password_hash($password, PASSWORD_DEFAULT),
                         ':mobile_number' => $mobile_number,
                         ':first_name' => $first_name,
                         ':middle_name' => $middle_name,

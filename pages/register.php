@@ -78,7 +78,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $user_stmt->bindParam(":role_id", $role_id);
                     $user_stmt->bindParam(":username", $username);
                     $user_stmt->bindParam(":email", $email);
-                    $user_stmt->bindParam(":password", $password);
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $user_stmt->bindParam(":password", $hashed_password);
                     $user_stmt->bindParam(":mobile_number", $mobile_number);
                     $user_stmt->bindParam(":first_name", $first_name);
                     $user_stmt->bindParam(":middle_name", $middle_name);
