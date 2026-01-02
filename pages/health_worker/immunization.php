@@ -510,6 +510,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <a href="view_immunization.php?id=<?php echo $record['immunization_record_id']; ?>" class="btn btn-view" title="View Details">
                                             <i class="fas fa-eye"></i> View
                                         </a>
+                                        <?php if (!empty($record['next_schedule_date'])): ?>
+                                        <button class="btn btn-sms-reminder" onclick="sendImmunizationReminder(<?php echo $record['patient_id']; ?>, '<?php echo htmlspecialchars($record['immunization_name'], ENT_QUOTES); ?>', '<?php echo $record['next_schedule_date']; ?>', this)" title="Send SMS Reminder">
+                                            <i class="fas fa-sms"></i> SMS
+                                        </button>
+                                        <?php endif; ?>
                                         <button class="btn btn-danger" onclick="deleteRecord(<?php echo $record['immunization_record_id']; ?>)" title="Delete Record">
                                             <i class="fas fa-trash"></i> Delete
                                         </button>
@@ -591,6 +596,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <a href="view_immunization.php?id=<?php echo $record['immunization_record_id']; ?>" class="btn btn-view" title="View Details">
                                             <i class="fas fa-eye"></i> View
                                         </a>
+                                        <?php if (!empty($record['next_schedule_date'])): ?>
+                                        <button class="btn btn-sms-reminder" onclick="sendImmunizationReminder(<?php echo $record['patient_id']; ?>, '<?php echo htmlspecialchars($record['immunization_name'], ENT_QUOTES); ?>', '<?php echo $record['next_schedule_date']; ?>', this)" title="Send SMS Reminder">
+                                            <i class="fas fa-sms"></i> SMS
+                                        </button>
+                                        <?php endif; ?>
                                         <button class="btn btn-danger" onclick="deleteRecord(<?php echo $record['immunization_record_id']; ?>)" title="Delete Record">
                                             <i class="fas fa-trash"></i> Delete
                                         </button>
@@ -875,8 +885,134 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
     }
+    
+    // Function to send immunization reminder SMS
+    function sendImmunizationReminder(patientId, immunizationName, nextScheduleDate, buttonElement) {
+        if (!confirm('Send an SMS reminder to this patient for their upcoming immunization?')) {
+            return;
+        }
+        
+        const originalContent = buttonElement.innerHTML;
+        buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        buttonElement.disabled = true;
+        
+        // Format the date for the message (short format)
+        const dateObj = new Date(nextScheduleDate);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const formattedDate = `${months[dateObj.getMonth()]} ${dateObj.getDate()}, ${dateObj.getFullYear()}`;
+        
+        // Create safe immunization name (shorter)
+        let safeImmunizationName = immunizationName;
+        if (immunizationName.toLowerCase().includes('hepatitis')) {
+            safeImmunizationName = 'Hep B';
+        }
+        
+        // Message with IPROG template prefix (keep short!)
+        const message = `This is an important message from the Organization. Hello, your ${safeImmunizationName} is due on ${formattedDate}. Please visit the Health Center. Thank you. - Respective Personnel`;
+        
+        fetch('/connect/api/immunizations/send_reminder.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                patient_id: patientId,
+                message: message,
+                type: 'immunization_reminder',
+                immunization_type: immunizationName,
+                schedule_date: nextScheduleDate
+            }),
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('✓ ' + data.message, 'success');
+                // Auto reload after 2 seconds
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showToast('Failed: ' + (data.message || 'Unknown error'), 'error');
+                buttonElement.innerHTML = originalContent;
+                buttonElement.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error sending reminder. Please try again.', 'error');
+            buttonElement.innerHTML = originalContent;
+            buttonElement.disabled = false;
+        });
+    }
+    
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        // Remove any existing toasts
+        const existingToasts = document.querySelectorAll('.custom-toast');
+        existingToasts.forEach(toast => toast.remove());
+        
+        const toast = document.createElement('div');
+        toast.className = `custom-toast custom-toast-${type}`;
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+        
+        // Show toast
+        setTimeout(() => toast.classList.add('show'), 100);
+        
+        // Hide toast after 5 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 300);
+        }, 5000);
+    }
     </script>
     <style>
+        /* Toast styles */
+        .custom-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            max-width: 400px;
+        }
+        .custom-toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .custom-toast-success { background: #28a745; }
+        .custom-toast-error { background: #dc3545; }
+        .custom-toast-info { background: #17a2b8; }
+        .custom-toast-warning { background: #ffc107; color: #333; }
+        
+        /* SMS Reminder button styles */
+        .btn-sms-reminder {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-sms-reminder:hover {
+            background: #138496;
+        }
+        .btn-sms-reminder:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
         .immunization-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));

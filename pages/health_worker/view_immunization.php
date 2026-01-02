@@ -319,27 +319,27 @@ try {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
             btn.disabled = true;
             
-            // Format the date for display
-            const formattedDate = new Date(scheduleDate).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+            // Format the date for display (short format)
+            const dateObj = new Date(scheduleDate);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const formattedDate = `${months[dateObj.getMonth()]} ${dateObj.getDate()}, ${dateObj.getFullYear()}`;
             
             // Create the reminder message with content filter workaround
             let safeImmunizationType = immunizationType;
             // Handle immunization types that might be flagged by content filters
             if (immunizationType.toLowerCase().includes('hepatitis')) {
-                safeImmunizationType = 'Hep B vaccine';
+                safeImmunizationType = 'Hep B';
             }
             
-            const message = `Your ${safeImmunizationType} appointment is on ${formattedDate}. Please call us.`;
+            // Message with IPROG template prefix (keep short!)
+            const message = `This is an important message from the Organization. Hello, your ${safeImmunizationType} is due on ${formattedDate}. Please visit the Health Center. Thank you. - Respective Personnel`;
             
             // Use the immunization-specific reminder API
             fetch('../../api/immunizations/send_reminder.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
                     patient_id: patientId,
@@ -347,7 +347,8 @@ try {
                     type: 'immunization_reminder',
                     immunization_type: immunizationType,
                     schedule_date: scheduleDate
-                })
+                }),
+                credentials: 'same-origin'
             })
             .then(response => {
                 if (!response.ok) {
@@ -357,16 +358,18 @@ try {
             })
             .then(data => {
                 if (data.success) {
-                    showToast(data.message, 'success');
+                    showToast('✓ ' + data.message, 'success');
+                    // Auto reload after successful SMS
+                    setTimeout(() => location.reload(), 2000);
                 } else {
                     showToast('Failed to send reminder: ' + (data.message || 'Unknown error'), 'error');
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 showToast('Error sending reminder. Please check your internet connection and try again.', 'error');
-            })
-            .finally(() => {
                 btn.innerHTML = originalContent;
                 btn.disabled = false;
             });

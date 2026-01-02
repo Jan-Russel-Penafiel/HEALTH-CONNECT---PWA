@@ -843,6 +843,16 @@ try {
                                 <a href="/connect/pages/health_worker/view_appointment.php?id=<?php echo $appointment['id']; ?>" class="btn btn-info" title="View Details">
                                     <i class="fas fa-eye"></i> View
                                 </a>
+                                <?php if ($appointment['status'] === 'Scheduled'): ?>
+                                <button class="btn btn-primary" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Confirmed')" title="Confirm & Send SMS">
+                                    <i class="fas fa-sms"></i> Confirm
+                                </button>
+                                <?php endif; ?>
+                                <?php if ($appointment['status'] === 'Confirmed'): ?>
+                                <button class="btn btn-warning" onclick="sendSMSReminder(<?php echo $appointment['id']; ?>)" title="Send SMS Reminder">
+                                    <i class="fas fa-bell"></i> Remind
+                                </button>
+                                <?php endif; ?>
                                 <?php if ($appointment['status'] === 'Scheduled' || $appointment['status'] === 'Confirmed'): ?>
                                 <button class="btn btn-success" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Done')" title="Mark as Done">
                                     <i class="fas fa-check"></i> Done
@@ -904,6 +914,16 @@ try {
                         <a href="/connect/pages/health_worker/view_appointment.php?id=<?php echo $appointment['id']; ?>" class="btn btn-info" title="View Details">
                             <i class="fas fa-eye"></i> View
                         </a>
+                        <?php if ($appointment['status'] === 'Scheduled'): ?>
+                        <button class="btn btn-primary" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Confirmed')" title="Confirm & Send SMS">
+                            <i class="fas fa-sms"></i> Confirm
+                        </button>
+                        <?php endif; ?>
+                        <?php if ($appointment['status'] === 'Confirmed'): ?>
+                        <button class="btn btn-warning" onclick="sendSMSReminder(<?php echo $appointment['id']; ?>)" title="Send SMS Reminder">
+                            <i class="fas fa-bell"></i> Remind
+                        </button>
+                        <?php endif; ?>
                         <?php if ($appointment['status'] === 'Scheduled' || $appointment['status'] === 'Confirmed'): ?>
                         <button class="btn btn-success" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Done')" title="Mark as Done">
                             <i class="fas fa-check"></i> Done
@@ -1101,44 +1121,76 @@ try {
         });
     });
 
-    // Function to show toast notification
+    // Function to show toast notification (CSS-based, no Bootstrap JS required)
     function showToast(message, status = 'success') {
-        const toast = document.getElementById('notificationToast');
-        const toastMessage = document.getElementById('toastMessage');
-        const toastIcon = document.getElementById('toastIcon');
+        // Remove any existing custom toasts
+        const existingToasts = document.querySelectorAll('.custom-toast');
+        existingToasts.forEach(t => t.remove());
         
-        // Remove existing background classes
-        toast.className = 'toast align-items-center text-white border-0';
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = 'custom-toast';
         
-        // Set classes and icon based on status
+        // Set background color based on status
+        let bgColor, icon;
         switch(status) {
             case 'success':
-                toast.classList.add('bg-success');
-                toastIcon.className = 'fas fa-check-circle me-2';
+                bgColor = '#28a745';
+                icon = 'fa-check-circle';
                 break;
             case 'error':
-                toast.classList.add('bg-danger');
-                toastIcon.className = 'fas fa-exclamation-circle me-2';
+                bgColor = '#dc3545';
+                icon = 'fa-exclamation-circle';
+                break;
+            case 'warning':
+                bgColor = '#ffc107';
+                icon = 'fa-exclamation-triangle';
                 break;
             case 'info':
-                toast.classList.add('bg-info');
-                toastIcon.className = 'fas fa-info-circle me-2';
-                break;
             default:
-                toast.classList.add('bg-success');
-                toastIcon.className = 'fas fa-check-circle me-2';
+                bgColor = '#17a2b8';
+                icon = 'fa-info-circle';
+                break;
         }
         
-        // Set message
-        toastMessage.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${bgColor};
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 400px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        `;
         
-        // Initialize and show toast
-        const bsToast = new bootstrap.Toast(toast, {
-            animation: true,
-            autohide: true,
-            delay: 5000
-        });
-        bsToast.show();
+        toast.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+        document.body.appendChild(toast);
+        
+        // Trigger animation
+        setTimeout(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(0)';
+        }, 10);
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 300);
+        }, 5000);
     }
 
     // Check for URL parameters and show toast if needed
@@ -1168,7 +1220,15 @@ try {
 
     // Function to update status with toast notification
     function updateStatus(id, status) {
-        if (confirm('Are you sure you want to mark this appointment as ' + status + '?')) {
+        let confirmMessage = 'Are you sure you want to mark this appointment as ' + status + '?';
+        if (status === 'Confirmed') {
+            confirmMessage = 'Confirm this appointment and send SMS notification to the patient?';
+        }
+        
+        if (confirm(confirmMessage)) {
+            // Show loading state
+            showToast('Processing...', 'info');
+            
             fetch('/connect/api/appointments/update_status.php', {
                 method: 'POST',
                 headers: {
@@ -1188,13 +1248,24 @@ try {
                     
                     // If there's an SMS result, show it as well
                     if (data.sms_result) {
+                        const smsMessage = data.sms_result.success ? 
+                            '✓ SMS notification sent successfully!' : 
+                            'SMS: ' + data.sms_result.message;
+                        const smsStatus = data.sms_result.success ? 'success' : 'warning';
+                        
                         setTimeout(() => {
-                            showToast(data.sms_result.message, data.sms_result.success ? 'success' : 'info');
+                            showToast(smsMessage, smsStatus);
                         }, 1000);
+                        
+                        // If SMS was sent, reload faster
+                        if (data.sms_result.success) {
+                            setTimeout(() => location.reload(), 2000);
+                            return;
+                        }
                     }
                     
                     // Reload the page after showing notifications
-                    setTimeout(() => location.reload(), 3000);
+                    setTimeout(() => location.reload(), 2500);
                 } else {
                     showToast(data.message, 'error');
                 }
@@ -1202,6 +1273,40 @@ try {
             .catch(error => {
                 console.error('Error:', error);
                 showToast('An error occurred while updating the appointment status', 'error');
+            });
+        }
+    }
+    
+    // Function to send SMS reminder for confirmed appointments
+    function sendSMSReminder(id) {
+        if (confirm('Send an SMS reminder to the patient for this appointment?')) {
+            // Show loading state
+            showToast('Sending SMS reminder...', 'info');
+            
+            fetch('/connect/api/appointments/send_reminder.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    appointment_id: id
+                }),
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('✓ SMS reminder sent successfully!', 'success');
+                    // Auto reload after sending SMS
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showToast(data.message, 'warning');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('An error occurred while sending the SMS reminder', 'error');
             });
         }
     }

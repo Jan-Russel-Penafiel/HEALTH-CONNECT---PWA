@@ -796,8 +796,15 @@ if ($appointment['date_of_birth']) {
                     <div class="action-buttons" style="flex-direction: column;">
                         <?php if ($appointment['status_id'] == 1): // Scheduled ?>
                             <button onclick="updateStatus(<?php echo $appointment_id; ?>, 'confirmed')" class="btn btn-success">
-                                <i class="fas fa-check"></i>
-                                Confirm Appointment
+                                <i class="fas fa-sms"></i>
+                                Confirm & Send SMS
+                            </button>
+                        <?php endif; ?>
+                        
+                        <?php if ($appointment['status_id'] == 2 && !empty($appointment['patient_phone'])): // Confirmed ?>
+                            <button onclick="sendSMSReminder(<?php echo $appointment_id; ?>)" class="btn btn-warning">
+                                <i class="fas fa-bell"></i>
+                                Send SMS Reminder
                             </button>
                         <?php endif; ?>
                         
@@ -834,55 +841,94 @@ if ($appointment['date_of_birth']) {
     <?php include __DIR__ . '/../../includes/footer.php'; ?>
     
     <script>
-    // Function to show toast notification
+    // Function to show toast notification (CSS-based, no Bootstrap JS required)
     function showToast(message, status = 'success') {
-        const toast = document.getElementById('notificationToast');
-        const toastMessage = document.getElementById('toastMessage');
-        const toastIcon = document.getElementById('toastIcon');
+        // Remove any existing custom toasts
+        const existingToasts = document.querySelectorAll('.custom-toast');
+        existingToasts.forEach(t => t.remove());
         
-        // Remove existing background classes
-        toast.className = 'toast align-items-center text-white border-0';
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = 'custom-toast';
         
-        // Set classes and icon based on status
+        // Set background color based on status
+        let bgColor, icon;
         switch(status) {
             case 'success':
-                toast.classList.add('bg-success');
-                toastIcon.className = 'fas fa-check-circle me-2';
+                bgColor = '#28a745';
+                icon = 'fa-check-circle';
                 break;
             case 'error':
-                toast.classList.add('bg-danger');
-                toastIcon.className = 'fas fa-exclamation-circle me-2';
+                bgColor = '#dc3545';
+                icon = 'fa-exclamation-circle';
+                break;
+            case 'warning':
+                bgColor = '#ffc107';
+                icon = 'fa-exclamation-triangle';
                 break;
             case 'info':
-                toast.classList.add('bg-info');
-                toastIcon.className = 'fas fa-info-circle me-2';
-                break;
             default:
-                toast.classList.add('bg-secondary');
-                toastIcon.className = 'fas fa-bell me-2';
+                bgColor = '#17a2b8';
+                icon = 'fa-info-circle';
+                break;
         }
         
-        // Set message
-        toastMessage.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${bgColor};
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 400px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        `;
         
-        // Initialize and show toast
-        const bsToast = new bootstrap.Toast(toast, {
-            animation: true,
-            autohide: true,
-            delay: 5000
-        });
-        bsToast.show();
+        toast.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+        document.body.appendChild(toast);
+        
+        // Trigger animation
+        setTimeout(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(0)';
+        }, 10);
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 300);
+        }, 5000);
     }
 
     // Function to update status
     function updateStatus(id, status) {
         let confirmMessage = 'Are you sure you want to mark this appointment as ' + status + '?';
+        if (status === 'confirmed') {
+            confirmMessage = 'Confirm this appointment and send SMS notification to the patient?';
+        }
         
         if (confirm(confirmMessage)) {
+            // Show loading state
+            showToast('Processing...', 'info');
+            
             fetch('/connect/api/appointments/update_status.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
                     appointment_id: id,
@@ -894,10 +940,31 @@ if ($appointment['date_of_birth']) {
             .then(data => {
                 if (data.success) {
                     showToast(data.message, 'success');
-                    // Redirect back to appointments page after 1 second
+                    
+                    // If there's an SMS result, show it as well
+                    if (data.sms_result) {
+                        const smsMessage = data.sms_result.success ? 
+                            '✓ SMS notification sent successfully!' : 
+                            'SMS: ' + data.sms_result.message;
+                        const smsStatus = data.sms_result.success ? 'success' : 'info';
+                        
+                        setTimeout(() => {
+                            showToast(smsMessage, smsStatus);
+                        }, 1000);
+                        
+                        // If SMS was sent, redirect faster
+                        if (data.sms_result.success) {
+                            setTimeout(() => {
+                                window.location.href = '/connect/pages/health_worker/appointments.php?status_update=success&sms_sent=1&message=' + encodeURIComponent(data.message);
+                            }, 2000);
+                            return;
+                        }
+                    }
+                    
+                    // Redirect back to appointments page
                     setTimeout(() => {
                         window.location.href = '/connect/pages/health_worker/appointments.php?status_update=success&message=' + encodeURIComponent(data.message);
-                    }, 1000);
+                    }, 1500);
                 } else {
                     showToast(data.message || 'Failed to update appointment status', 'error');
                 }
@@ -905,6 +972,40 @@ if ($appointment['date_of_birth']) {
             .catch(error => {
                 console.error('Error:', error);
                 showToast('An error occurred while updating the appointment status', 'error');
+            });
+        }
+    }
+    
+    // Function to send SMS reminder
+    function sendSMSReminder(id) {
+        if (confirm('Send an SMS reminder to the patient for this appointment?')) {
+            // Show loading state
+            showToast('Sending SMS reminder...', 'info');
+            
+            fetch('/connect/api/appointments/send_reminder.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    appointment_id: id
+                }),
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('✓ SMS reminder sent successfully!', 'success');
+                    // Auto reload after sending SMS
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showToast(data.message, 'warning');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('An error occurred while sending the SMS reminder', 'error');
             });
         }
     }

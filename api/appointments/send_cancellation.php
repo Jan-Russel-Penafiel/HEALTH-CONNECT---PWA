@@ -1,4 +1,9 @@
 <?php
+/**
+ * Send Cancellation SMS API
+ * Sends SMS notification when an appointment is cancelled
+ */
+
 // Ensure no output before headers
 ob_start();
 
@@ -11,7 +16,7 @@ header('Content-Type: application/json');
 
 // Custom error handler
 function handleError($errno, $errstr, $errfile, $errline) {
-    error_log("PHP Error in send_reminder.php: [$errno] $errstr in $errfile on line $errline");
+    error_log("PHP Error in send_cancellation.php: [$errno] $errstr in $errfile on line $errline");
     $error = [
         'success' => false,
         'message' => 'A system error occurred. Please try again later.',
@@ -30,7 +35,7 @@ set_error_handler('handleError');
 
 // Function to log detailed debug information
 function logDebug($message, $data = null) {
-    $log = date('Y-m-d H:i:s') . " [send_reminder.php] $message";
+    $log = date('Y-m-d H:i:s') . " [send_cancellation.php] $message";
     if ($data !== null) {
         $log .= "\nData: " . print_r($data, true);
     }
@@ -197,17 +202,23 @@ try {
     $appointment_date = date('M j, Y', strtotime($appointment['appointment_date']));
     $appointment_time = date('g:i A', strtotime($appointment['appointment_time']));
     
-    // Prepare reminder SMS message (keep short for IPROG template)
-    $message = "Hello {$appointment['first_name']}, reminder: Appointment on {$appointment_date} at {$appointment_time}. Please arrive early. Thank you. - Respective Personnel";
+    // Get cancellation reason if provided
+    $reason = isset($data['reason']) ? $data['reason'] : '';
+    
+    // Prepare cancellation SMS message (keep short for IPROG template)
+    $message = "Hello {$appointment['first_name']}, your appointment on {$appointment_date} at {$appointment_time} has been CANCELLED.";
+    if (!empty($reason)) {
+        $message .= " Reason: {$reason}.";
+    }
+    $message .= " Thank you. - Respective Personnel";
     
     // Send SMS using the sendSMS function
-    // NOTE: We do NOT pass appointment_id here because reminders should be allowed 
-    // even after the initial confirmation SMS was sent. The 1-minute deduplication
-    // in sendSMS() will still prevent accidental double-sends.
+    // NOTE: We do NOT pass appointment_id here because cancellation SMS should be allowed 
+    // even after a confirmation SMS was sent. The 1-minute deduplication will prevent double-sends.
     $sms_result = sendSMS($appointment['mobile_number'], $message);
     
     if ($sms_result['success']) {
-        logDebug("SMS reminder sent successfully", [
+        logDebug("Cancellation SMS sent successfully", [
             'appointment_id' => $data['appointment_id'],
             'recipient' => $appointment['mobile_number'],
             'reference_id' => $sms_result['reference_id'] ?? null
@@ -215,11 +226,11 @@ try {
         ob_clean();
         echo json_encode([
             'success' => true,
-            'message' => 'SMS reminder sent successfully!',
+            'message' => 'Cancellation SMS sent successfully!',
             'reference_id' => $sms_result['reference_id'] ?? null
         ]);
     } else {
-        logDebug("Failed to send SMS reminder", [
+        logDebug("Failed to send cancellation SMS", [
             'appointment_id' => $data['appointment_id'],
             'error' => $sms_result['message']
         ]);

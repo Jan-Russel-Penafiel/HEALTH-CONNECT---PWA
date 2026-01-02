@@ -167,6 +167,21 @@ try {
         exit;
     }
 
+    // Check if SMS notifications are enabled
+    $query = "SELECT value FROM settings WHERE name = 'enable_sms_notifications'";
+    $stmt = $pdo->query($query);
+    $sms_enabled = $stmt->fetchColumn();
+    
+    if ($sms_enabled != '1') {
+        logDebug("SMS notifications disabled in settings");
+        ob_clean();
+        echo json_encode([
+            'success' => false,
+            'message' => 'SMS notifications are currently disabled in system settings.'
+        ]);
+        exit;
+    }
+
     // Send SMS reminder
     $sms_result = sendSMS($patient['mobile_number'], $data['message']);
     

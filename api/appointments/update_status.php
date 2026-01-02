@@ -218,11 +218,11 @@ try {
                 
                 if ($sms_enabled == '1') {
                     // Format date and time for SMS
-                    $appointment_date = date('F j, Y', strtotime($appointment_details['appointment_date']));
+                    $appointment_date = date('M j, Y', strtotime($appointment_details['appointment_date']));
                     $appointment_time = date('g:i A', strtotime($appointment_details['appointment_time']));
                     
-                    // Prepare SMS message
-                    $message = "Hello {$appointment_details['first_name']}, your appointment at Brgy. Poblacion Health Center has been CONFIRMED for {$appointment_date} at {$appointment_time} with Dr. {$appointment_details['hw_first_name']} {$appointment_details['hw_last_name']}. Please arrive 15 minutes early. Thank you!";
+                    // Prepare SMS message (keep short for IPROG template)
+                    $message = "Hello {$appointment_details['first_name']}, your appointment is CONFIRMED for {$appointment_date} at {$appointment_time}. Please arrive early. Thank you. - Respective Personnel";
                     
                     // Send SMS
                     $sms_result = sendSMS($appointment_details['mobile_number'], $message, $data['appointment_id']);
@@ -254,6 +254,65 @@ try {
                     'success' => false,
                     'message' => 'SMS notification already sent for this appointment'
                 ];
+            } else {
+                $sms_result = [
+                    'success' => false,
+                    'message' => 'Patient does not have a registered mobile number'
+                ];
+            }
+        }
+        
+        // Check if status is now "Cancelled" (status_id = 4) - Send cancellation SMS
+        if ($status_id == 4) {
+            // Get appointment details and patient information
+            $query = "SELECT a.*, 
+                             u.first_name, u.last_name, u.mobile_number,
+                             hw_user.first_name as hw_first_name, hw_user.last_name as hw_last_name
+                      FROM appointments a
+                      JOIN patients p ON a.patient_id = p.patient_id
+                      JOIN users u ON p.user_id = u.user_id
+                      JOIN health_workers hw ON a.health_worker_id = hw.health_worker_id
+                      JOIN users hw_user ON hw.user_id = hw_user.user_id
+                      WHERE a.appointment_id = ?";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$data['appointment_id']]);
+            $appointment_details = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Check if patient has a mobile number
+            if (!empty($appointment_details['mobile_number'])) {
+                // Check if SMS notifications are enabled
+                $query = "SELECT value FROM settings WHERE name = 'enable_sms_notifications'";
+                $stmt = $pdo->query($query);
+                $sms_enabled = $stmt->fetchColumn();
+                
+                if ($sms_enabled == '1') {
+                    // Format date and time for SMS
+                    $appointment_date = date('F j, Y', strtotime($appointment_details['appointment_date']));
+                    $appointment_time = date('g:i A', strtotime($appointment_details['appointment_time']));
+                    
+                    // Prepare cancellation SMS message
+                    $message = "Hello {$appointment_details['first_name']}, your appointment at Brgy. Poblacion Health Center scheduled for {$appointment_date} at {$appointment_time} has been CANCELLED. Please contact us to reschedule. Thank you!";
+                    
+                    // Send SMS
+                    $sms_result = sendSMS($appointment_details['mobile_number'], $message, $data['appointment_id']);
+                    
+                    if ($sms_result['success']) {
+                        logDebug("Cancellation SMS notification sent successfully", [
+                            'appointment_id' => $data['appointment_id'],
+                            'recipient' => $appointment_details['mobile_number']
+                        ]);
+                    } else {
+                        logDebug("Failed to send cancellation SMS notification", [
+                            'appointment_id' => $data['appointment_id'],
+                            'error' => $sms_result['message']
+                        ]);
+                    }
+                } else {
+                    $sms_result = [
+                        'success' => false,
+                        'message' => 'SMS notifications are currently disabled in system settings'
+                    ];
+                }
             } else {
                 $sms_result = [
                     'success' => false,
