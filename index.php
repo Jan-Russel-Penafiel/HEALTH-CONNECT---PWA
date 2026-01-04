@@ -76,6 +76,34 @@ session_start();
             padding-top: 60px; /* Match header height */
         }
         
+        /* Alert animations */
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+        }
+        
+        .alert-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
         /* Top Navbar Styles */
         .top-navbar {
             background: #fff;
@@ -1069,16 +1097,63 @@ session_start();
             }
         });
 
-        // Simple form submission handling
+        // Contact form submission handling with AJAX
         document.getElementById('contactForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // In a real app, this would be an API call
-            // For now, just show a success message
-            showAlert('Thank you for your message! We will get back to you soon.', 'success');
+            const form = this;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
             
-            // Reset the form
-            this.reset();
+            // Disable submit button and show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            
+            // Get form data
+            const formData = new FormData(form);
+            
+            // Send AJAX request
+            fetch('send_contact_email.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                // Check if response is ok
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                // Get response text first for debugging
+                return response.text().then(text => {
+                    console.log('Raw response:', text); // Debug log
+                    
+                    // Check if it's JSON
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error('JSON parse error:', e);
+                        console.error('Response text:', text);
+                        throw new Error('Server response is not valid JSON');
+                    }
+                });
+            })
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    form.reset();
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('An error occurred while sending your message. Please try again.', 'error');
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            });
         });
         
         // Function to show alerts
@@ -1086,13 +1161,30 @@ session_start();
             const alertContainer = document.querySelector('.alert-container');
             const alert = document.createElement('div');
             alert.className = `alert alert-${type}`;
+            alert.style.padding = '15px';
+            alert.style.marginBottom = '20px';
+            alert.style.borderRadius = '8px';
+            alert.style.fontWeight = '500';
+            alert.style.animation = 'slideIn 0.3s ease';
+            
+            if (type === 'success') {
+                alert.style.backgroundColor = '#d4edda';
+                alert.style.color = '#155724';
+                alert.style.borderLeft = '4px solid #28a745';
+            } else if (type === 'error') {
+                alert.style.backgroundColor = '#f8d7da';
+                alert.style.color = '#721c24';
+                alert.style.borderLeft = '4px solid #dc3545';
+            }
+            
             alert.textContent = message;
             
             alertContainer.appendChild(alert);
             
             // Remove alert after 5 seconds
             setTimeout(function() {
-                alert.remove();
+                alert.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => alert.remove(), 300);
             }, 5000);
         }
         
