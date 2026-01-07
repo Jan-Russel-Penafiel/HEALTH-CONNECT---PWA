@@ -47,7 +47,7 @@ try {
               JOIN users u ON p.user_id = u.user_id
               JOIN appointment_status s ON a.status_id = s.status_id
               WHERE a.health_worker_id = ? AND a.status_id != 3
-              ORDER BY CASE WHEN s.status_name = 'Scheduled' THEN 0 ELSE 1 END, a.created_at ASC";
+              ORDER BY a.created_at DESC";
     
     $stmt = $pdo->prepare($query);
     $stmt->execute([$health_worker_id]);

@@ -65,7 +65,7 @@ $query = "SELECT a.*,
           JOIN users h_u ON hw.user_id = h_u.user_id
           JOIN appointment_status s ON a.status_id = s.status_id
           WHERE a.patient_id = :patient_id 
-          ORDER BY a.appointment_date DESC, a.appointment_time DESC";
+          ORDER BY a.created_at DESC";
 $stmt = $conn->prepare($query);
 $stmt->execute([':patient_id' => $patient['patient_id']]);
 $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
