@@ -2198,8 +2198,14 @@ try {
         doc.setTextColor(60);
         doc.text(`Total Appointments: ${tableData.length}`, 14, finalY + 10);
         
-        // Save PDF
-        const fileName = `appointments_${filterValue === 'all' ? 'all' : filterValue.replace(':', '')}_${new Date().toISOString().split('T')[0]}.pdf`;
+        // Save PDF with descriptive filename
+        const dateStamp = new Date().toISOString().split('T')[0];
+        let fileNameParts = ['appointments'];
+        if (searchTerm) fileNameParts.push('search');
+        if (dateFilter) fileNameParts.push(dateFilter);
+        if (timeFilter !== 'all') fileNameParts.push(timeFilter.replace(':', ''));
+        fileNameParts.push(dateStamp);
+        const fileName = fileNameParts.join('_') + '.pdf';
         doc.save(fileName);
         
         showToast(`PDF downloaded: ${fileName}`, 'success');

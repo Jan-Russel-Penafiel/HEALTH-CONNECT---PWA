@@ -258,31 +258,8 @@ function sendSMS($recipient_number, $message, $appointment_id = null) {
             $formatted_phone = substr($formatted_phone, 1);
         }
         
-        // DEDUPLICATION: Check if same SMS was sent to this number in last 1 minute
-        // This prevents double-sending from accidental double-clicks or page reloads
-        try {
-            $check_query = "SELECT sms_id FROM sms_logs 
-                            WHERE recipient_number LIKE ? 
-                            AND SUBSTRING(message, 1, 100) = SUBSTRING(?, 1, 100)
-                            AND status = 'sent'
-                            AND sent_at >= DATE_SUB(NOW(), INTERVAL 1 MINUTE)
-                            LIMIT 1";
-            $check_stmt = $pdo->prepare($check_query);
-            $check_stmt->execute(['%' . substr($formatted_phone, -10), $formatted_message]);
-            $existing_sms = $check_stmt->fetch();
-            
-            if ($existing_sms) {
-                return [
-                    'success' => false,
-                    'message' => 'SMS was already sent recently. Please wait 1 minute before sending again.',
-                    'duplicate' => true,
-                    'existing_id' => $existing_sms['sms_id']
-                ];
-            }
-        } catch (PDOException $e) {
-            // Table might not exist or have different structure, continue sending
-            error_log("Deduplication check failed: " . $e->getMessage());
-        }
+        // DEDUPLICATION REMOVED: No longer checking for duplicate SMS within time window
+        // SMS can now be sent without time-based restrictions
         
         // If appointment_id is provided, check if SMS was already sent for this appointment
         if ($appointment_id) {

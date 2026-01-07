@@ -73,21 +73,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (!empty($patient_data['mobile_number'])) {
                             require_once __DIR__ . '/../../includes/sms.php';
                             
-                            // Check if SMS notifications are enabled
-                            $query = "SELECT value FROM settings WHERE name = 'enable_sms_notifications'";
-                            $stmt = $conn->query($query);
-                            $sms_enabled = $stmt->fetchColumn();
+                            error_log("Patients.php Follow-up SMS: Attempting to send SMS for follow-up on {$follow_up_date} to {$patient_data['mobile_number']}");
                             
-                            if ($sms_enabled == '1') {
-                                $formatted_date = date('F j, Y', strtotime($follow_up_date));
-                                $patient_name = $patient_data['first_name'];
-                                $custom_message = !empty($follow_up_message) ? " Doctor's note: " . $follow_up_message : "";
-                                
-                                $message = "Hello {$patient_name}, you have a scheduled follow-up checkup on {$formatted_date} at Brgy. Poblacion Health Center.{$custom_message} Thank you. - Respective Personnel";
-                                
-                                sendSMS($patient_data['mobile_number'], $message);
+                            $formatted_date = date('M j, Y', strtotime($follow_up_date));
+                            $patient_name = $patient_data['first_name'];
+                            
+                            // Build message based on whether there's a doctor's note
+                            if (!empty($follow_up_message)) {
+                                $message = "Hello {$patient_name}, reminder: Follow-up checkup on {$formatted_date}. Doctor's note: {$follow_up_message}. Thank you. - Respective Personnel";
+                            } else {
+                                $message = "Hello {$patient_name}, reminder: Follow-up checkup on {$formatted_date}. Please visit the Health Center. Thank you. - Respective Personnel";
                             }
+                            
+                            error_log("Patients.php Follow-up SMS Message: {$message}");
+                            
+                            // sendSMS function handles checking if SMS is enabled
+                            $sms_result = sendSMS($patient_data['mobile_number'], $message);
+                            
+                            if ($sms_result && isset($sms_result['success'])) {
+                                error_log("Patients.php Follow-up SMS Result: " . json_encode($sms_result));
+                                if (!$sms_result['success']) {
+                                    error_log("Patients.php Follow-up SMS Failed: " . ($sms_result['message'] ?? 'Unknown error'));
+                                }
+                            } else {
+                                error_log("Patients.php Follow-up SMS: sendSMS returned unexpected result");
+                            }
+                        } else {
+                            error_log("Patients.php Follow-up SMS skipped: No mobile number for patient ID " . $_POST['patient_id']);
                         }
+                    } else {
+                        error_log("Patients.php Follow-up SMS skipped: has_follow_up={$has_follow_up}, follow_up_date=" . ($follow_up_date ?: 'empty'));
                     }
                     
                     $_SESSION['success'] = "Medical record added successfully.";
