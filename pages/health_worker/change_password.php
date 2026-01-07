@@ -107,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <?php include '../../includes/navbar.php'; ?>
+    <?php include '../../includes/today_appointments_banner.php'; ?>
 
     <div class="container">
         <div class="dashboard-header">

@@ -401,6 +401,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <?php include __DIR__ . '/../../includes/navbar.php'; ?>
+    <?php include __DIR__ . '/../../includes/today_appointments_banner.php'; ?>
 
     <div class="container">
         <div class="page-header">

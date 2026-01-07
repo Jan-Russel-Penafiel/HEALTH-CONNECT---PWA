@@ -35,6 +35,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $date_of_birth = trim($_POST['date_of_birth']);
     $mobile_number = trim($_POST['mobile_number']);
     $address = trim($_POST['address']);
+    $blood_type = trim($_POST['blood_type'] ?? '');
+    $height = trim($_POST['height'] ?? '');
+    $weight = trim($_POST['weight'] ?? '');
+    $emergency_contact_name = trim($_POST['emergency_contact_name'] ?? '');
+    $emergency_contact_number = trim($_POST['emergency_contact_number'] ?? '');
+    $emergency_contact_relationship = trim($_POST['emergency_contact_relationship'] ?? '');
     
     // Validate input
     if (empty($username) || empty($email) || empty($password) || empty($first_name) || empty($last_name) || 
@@ -92,10 +98,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         // Get the inserted user ID
                         $user_id = $conn->lastInsertId();
                         
-                        // Insert patient record
-                        $patient_query = "INSERT INTO patients (user_id) VALUES (:user_id)";
+                        // Insert patient record with health info and emergency contact
+                        $patient_query = "INSERT INTO patients (user_id, blood_type, height, weight, 
+                                         emergency_contact_name, emergency_contact_number, emergency_contact_relationship) 
+                                         VALUES (:user_id, :blood_type, :height, :weight, 
+                                         :emergency_contact_name, :emergency_contact_number, :emergency_contact_relationship)";
                         $patient_stmt = $conn->prepare($patient_query);
                         $patient_stmt->bindParam(":user_id", $user_id);
+                        $patient_stmt->bindParam(":blood_type", $blood_type);
+                        $patient_stmt->bindParam(":height", $height);
+                        $patient_stmt->bindParam(":weight", $weight);
+                        $patient_stmt->bindParam(":emergency_contact_name", $emergency_contact_name);
+                        $patient_stmt->bindParam(":emergency_contact_number", $emergency_contact_number);
+                        $patient_stmt->bindParam(":emergency_contact_relationship", $emergency_contact_relationship);
                         
                         if ($patient_stmt->execute()) {
                             // Commit the transaction
@@ -859,6 +874,62 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="form-group">
                     <label for="address">Complete Address</label>
                     <textarea id="address" name="address" class="form-control" rows="3" placeholder="Your complete address" required></textarea>
+                </div>
+            </div>
+            
+            <div class="form-section" style="border-bottom: none; margin-bottom: 15px;">
+                <h3 class="form-section-title"><i class="fas fa-heartbeat"></i> Health Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="blood_type" class="optional">Blood Type</label>
+                        <select id="blood_type" name="blood_type" class="form-control">
+                            <option value="">Select Blood Type</option>
+                            <option value="A+" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'A+') ? 'selected' : ''; ?>>A+</option>
+                            <option value="A-" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'A-') ? 'selected' : ''; ?>>A-</option>
+                            <option value="B+" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'B+') ? 'selected' : ''; ?>>B+</option>
+                            <option value="B-" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'B-') ? 'selected' : ''; ?>>B-</option>
+                            <option value="AB+" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'AB+') ? 'selected' : ''; ?>>AB+</option>
+                            <option value="AB-" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'AB-') ? 'selected' : ''; ?>>AB-</option>
+                            <option value="O+" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'O+') ? 'selected' : ''; ?>>O+</option>
+                            <option value="O-" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'O-') ? 'selected' : ''; ?>>O-</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="height" class="optional">Height (cm)</label>
+                        <input type="number" step="0.01" class="form-control" id="height" 
+                               name="height" placeholder="Enter height in cm"
+                               value="<?php echo isset($_POST['height']) ? htmlspecialchars($_POST['height']) : ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="weight" class="optional">Weight (kg)</label>
+                        <input type="number" step="0.01" class="form-control" id="weight" 
+                               name="weight" placeholder="Enter weight in kg"
+                               value="<?php echo isset($_POST['weight']) ? htmlspecialchars($_POST['weight']) : ''; ?>">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section" style="border-bottom: none; margin-bottom: 15px;">
+                <h3 class="form-section-title"><i class="fas fa-phone-square-alt"></i> Emergency Contact</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="emergency_contact_name" class="optional">Contact Name</label>
+                        <input type="text" class="form-control" id="emergency_contact_name" 
+                               name="emergency_contact_name" placeholder="Enter emergency contact name"
+                               value="<?php echo isset($_POST['emergency_contact_name']) ? htmlspecialchars($_POST['emergency_contact_name']) : ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="emergency_contact_number" class="optional">Contact Number</label>
+                        <input type="tel" class="form-control" id="emergency_contact_number" 
+                               name="emergency_contact_number" placeholder="Enter emergency contact number"
+                               value="<?php echo isset($_POST['emergency_contact_number']) ? htmlspecialchars($_POST['emergency_contact_number']) : ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="emergency_contact_relationship" class="optional">Relationship</label>
+                        <input type="text" class="form-control" id="emergency_contact_relationship" 
+                               name="emergency_contact_relationship" placeholder="e.g. Parent, Spouse, Sibling"
+                               value="<?php echo isset($_POST['emergency_contact_relationship']) ? htmlspecialchars($_POST['emergency_contact_relationship']) : ''; ?>">
+                    </div>
                 </div>
             </div>
             

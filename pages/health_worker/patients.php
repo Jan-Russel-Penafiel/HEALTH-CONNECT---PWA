@@ -832,6 +832,7 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
     <?php include '../../includes/navbar.php'; ?>
+    <?php include '../../includes/today_appointments_banner.php'; ?>
     
     <div class="container">
         <div class="page-header">

@@ -46,7 +46,7 @@ try {
               JOIN users u ON p.user_id = u.user_id
               JOIN appointment_status s ON a.status_id = s.status_id
               WHERE a.health_worker_id = ? AND a.status_id != 3
-              ORDER BY a.appointment_date ASC, a.appointment_time ASC";
+              ORDER BY CASE WHEN s.status_name = 'Scheduled' THEN 0 ELSE 1 END, a.appointment_date ASC, a.appointment_time ASC";
     
     $stmt = $pdo->prepare($query);
     $stmt->execute([$health_worker_id]);
@@ -104,6 +104,8 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Appointments - HealthConnect</title>
     <?php include __DIR__ . '/../../includes/header_links.php'; ?>
+    <!-- FullCalendar JS (v6 doesn't need separate CSS) -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     <!-- Add jsQR library for QR code scanning -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
@@ -249,6 +251,12 @@ try {
         .appointment-card.highlighted {
             background-color: #fff3cd;
             box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+            animation: highlight-pulse 2s ease-in-out;
+        }
+        
+        /* Highlight for table rows */
+        tr.highlighted {
+            background-color: #fff3cd !important;
             animation: highlight-pulse 2s ease-in-out;
         }
 
@@ -428,6 +436,39 @@ try {
             .appointment-actions .btn {
                 width: 100%;
             }
+        }
+        
+        .btn-today {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+        }
+        
+        .btn-today:hover {
+            background: linear-gradient(135deg, #f57c00, #ef6c00);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.4);
+        }
+        
+        .btn-today .badge {
+            background: white;
+            color: #ff9800;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-left: 4px;
         }
         
         .btn-scan {
@@ -673,6 +714,520 @@ try {
             border: 1px solid #e9ecef;
         }
 
+        /* =========================================
+           CALENDAR AVAILABILITY SECTION STYLES
+           ========================================= */
+        .calendar-availability-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .section-header h2 {
+            margin: 0;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-header .btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+        }
+        
+        .section-header .btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .calendar-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 0;
+        }
+        
+        @media (max-width: 1100px) {
+            .calendar-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .calendar-wrapper {
+            padding: 20px;
+            border-right: 1px solid #eee;
+        }
+        
+        @media (max-width: 1100px) {
+            .calendar-wrapper {
+                border-right: none;
+                border-bottom: 1px solid #eee;
+            }
+        }
+        
+        .calendar-sidebar {
+            padding: 20px;
+            background: #fafafa;
+        }
+        
+        .sidebar-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-card h4 {
+            margin: 0 0 12px 0;
+            color: #333;
+            font-size: 0.95rem;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        
+        .legend-available { background: #4CAF50; }
+        .legend-unavailable { background: #f44336; }
+        .legend-limited { background: #ff9800; }
+        .legend-full { background: #9e9e9e; }
+        
+        .quick-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 12px 8px;
+            background: #f5f5f5;
+            border-radius: 6px;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* FullCalendar Customizations */
+        #availabilityCalendar .fc-toolbar-title {
+            font-size: 1.2rem !important;
+        }
+        
+        #availabilityCalendar .fc-button-primary {
+            background-color: #4CAF50 !important;
+            border-color: #4CAF50 !important;
+        }
+        
+        #availabilityCalendar .fc-button-primary:hover {
+            background-color: #45a049 !important;
+            border-color: #45a049 !important;
+        }
+        
+        #availabilityCalendar .fc-day-today {
+            background: #e8f5e9 !important;
+        }
+        
+        .fc-daygrid-day.available-date {
+            background: #e8f5e9 !important;
+            cursor: pointer;
+        }
+        
+        .fc-daygrid-day.unavailable-date {
+            background: #ffebee !important;
+            cursor: pointer;
+        }
+        
+        .fc-daygrid-day.unavailable-date .fc-daygrid-day-number {
+            color: #c62828 !important;
+            text-decoration: line-through;
+        }
+        
+        .fc-daygrid-day.limited-slots {
+            background: #fff3e0 !important;
+        }
+        
+        .fc-daygrid-day.full-slots {
+            background: #eeeeee !important;
+        }
+        
+        .slot-indicator {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 5px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 2px 4px;
+            display: inline-block;
+        }
+        
+        .slots-available { background: #4CAF50; color: white; }
+        .slots-limited { background: #ff9800; color: white; }
+        .slots-full { background: #9e9e9e; color: white; }
+        .slots-unavailable { background: #f44336; color: white; }
+        
+        /* Date Appointments List Styles */
+        .appointment-list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4CAF50;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .appointment-list-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .appointment-list-item.status-scheduled {
+            border-left-color: #2196F3;
+        }
+        
+        .appointment-list-item.status-confirmed {
+            border-left-color: #4CAF50;
+        }
+        
+        .appointment-list-item.status-done {
+            border-left-color: #9e9e9e;
+        }
+        
+        .appointment-list-item.status-cancelled {
+            border-left-color: #f44336;
+        }
+        
+        .appointment-list-time {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #333;
+            min-width: 80px;
+        }
+        
+        .appointment-list-details {
+            flex: 1;
+            margin-left: 15px;
+        }
+        
+        .appointment-list-patient {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 3px;
+        }
+        
+        .appointment-list-reason {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .appointment-list-status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .no-appointments {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+        
+        .no-appointments i {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
+        
+        /* Availability Modal Styles */
+        .availability-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1050;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .availability-modal-overlay.active {
+            display: flex;
+        }
+        
+        .availability-modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .availability-modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .availability-modal-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        
+        .availability-modal-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .availability-modal-close:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .availability-modal-body {
+            padding: 20px;
+        }
+        
+        .availability-modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #fafafa;
+            border-radius: 0 0 12px 12px;
+        }
+        
+        .selected-date-display {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .selected-date-display .date-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2e7d32;
+        }
+        
+        .availability-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .availability-option {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .availability-option:hover {
+            border-color: #4CAF50;
+        }
+        
+        .availability-option.selected {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+        }
+        
+        .availability-option input[type="radio"] {
+            display: none;
+        }
+        
+        .option-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+        
+        .option-available .option-icon {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .option-unavailable .option-icon {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .option-details h4 {
+            margin: 0 0 4px 0;
+            color: #333;
+            font-size: 0.95rem;
+        }
+        
+        .option-details p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .slot-config-section {
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .slot-config-section.hidden {
+            display: none;
+        }
+        
+        .slot-config-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .slot-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .slot-input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        
+        .slot-input-group input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        }
+        
+        .slot-presets {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .slot-preset-btn {
+            padding: 6px 14px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        
+        .slot-preset-btn:hover,
+        .slot-preset-btn.active {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        /* Tab Navigation for switching views */
+        .view-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .view-tab {
+            padding: 12px 24px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .view-tab:hover {
+            background: #e8f5e9;
+        }
+        
+        .view-tab.active {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .view-content {
+            display: none;
+        }
+        
+        .view-content.active {
+            display: block;
+        }
+
         .notification {
             position: fixed;
             top: 20px;
@@ -747,6 +1302,7 @@ try {
 </head>
 <body>
     <?php include __DIR__ . '/../../includes/navbar.php'; ?>
+    <?php include __DIR__ . '/../../includes/today_appointments_banner.php'; ?>
 
     <!-- Toast container -->
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
@@ -772,22 +1328,36 @@ try {
 
     <div class="container">
         <div class="page-header">
-            <h1>Active Appointments</h1>
+            <h1>Appointments & Availability</h1>
             <div class="header-actions">
-                <a href="done_appointments.php" class="btn btn-success">
-                    <i class="fas fa-check-circle"></i> Completed Appointments
-                </a>
-                <button class="btn btn-primary" onclick="showAddAppointmentModal()">
-                    <i class="fas fa-plus"></i> Schedule Appointment
+                <?php if ($today_count > 0): ?>
+                <button class="btn btn-today" onclick="openTodayAppointmentsModal()">
+                    <i class="fas fa-calendar-day"></i> Today's <span class="badge"><?php echo $today_count; ?></span>
                 </button>
+                <?php endif; ?>
+                <a href="done_appointments.php" class="btn btn-success">
+                    <i class="fas fa-check-circle"></i> Completed
+                </a>
                 <button class="btn-scan" onclick="showQRScanner()">
-                    <i class="fas fa-qrcode"></i> Scan QR Code
+                    <i class="fas fa-qrcode"></i> Scan QR
                 </button>
             </div>
         </div>
 
-        <!-- Desktop Table Layout -->
-        <div class="appointments-table-container">
+        <!-- View Tabs -->
+        <div class="view-tabs">
+            <button class="view-tab active" onclick="switchView('appointments')">
+                <i class="fas fa-list"></i> Appointments
+            </button>
+            <button class="view-tab" onclick="switchView('availability')">
+                <i class="fas fa-calendar-alt"></i> Manage Availability
+            </button>
+        </div>
+
+        <!-- Appointments View -->
+        <div id="appointmentsView" class="view-content active">
+            <!-- Desktop Table Layout -->
+            <div class="appointments-table-container">
             <?php if (empty($appointments)): ?>
             <div class="empty-state">
                 <i class="fas fa-calendar-times"></i>
@@ -857,9 +1427,6 @@ try {
                                 <button class="btn btn-success" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Done')" title="Mark as Done">
                                     <i class="fas fa-check"></i> Done
                                 </button>
-                                <button class="btn btn-danger" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Cancelled')" title="Cancel Appointment">
-                                    <i class="fas fa-times"></i> Cancel
-                                </button>
                                 <?php endif; ?>
                             </div>
                         </td>
@@ -928,14 +1495,174 @@ try {
                         <button class="btn btn-success" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Done')" title="Mark as Done">
                             <i class="fas fa-check"></i> Done
                         </button>
-                        <button class="btn btn-danger" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Cancelled')" title="Cancel Appointment">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
                         <?php endif; ?>
                     </div>
                 </div>
                 <?php endforeach; ?>
             <?php endif; ?>
+        </div>
+        </div><!-- End Appointments View -->
+
+        <!-- Availability Calendar View -->
+        <div id="availabilityView" class="view-content">
+            <div class="calendar-availability-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-calendar-check"></i> Manage Your Availability</h2>
+                    <span class="text-white-50">Click on a date to set availability and slot limits</span>
+                </div>
+                <div class="calendar-layout">
+                    <div class="calendar-wrapper">
+                        <div id="availabilityCalendar"></div>
+                    </div>
+                    <div class="calendar-sidebar">
+                        <div class="sidebar-card">
+                            <h4><i class="fas fa-palette"></i> Legend</h4>
+                            <div class="legend-item">
+                                <div class="legend-color legend-available"></div>
+                                <span>Available (has slots)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color legend-unavailable"></div>
+                                <span>Unavailable (blocked)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color legend-limited"></div>
+                                <span>Limited (≤3 slots left)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color legend-full"></div>
+                                <span>Fully booked</span>
+                            </div>
+                        </div>
+                        <div class="sidebar-card">
+                            <h4><i class="fas fa-chart-pie"></i> Quick Stats</h4>
+                            <div class="quick-stats">
+                                <div class="stat-item">
+                                    <div class="stat-value" id="statUnavailable">0</div>
+                                    <div class="stat-label">Unavailable Days</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value" id="statTotalSlots">0</div>
+                                    <div class="stat-label">Total Slots</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value" id="statBooked">0</div>
+                                    <div class="stat-label">Booked</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value" id="statAvailable">0</div>
+                                    <div class="stat-label">Available</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sidebar-card">
+                            <h4><i class="fas fa-info-circle"></i> Instructions</h4>
+                            <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem; color: #666;">
+                                <li>Click a date to configure</li>
+                                <li>Set as available or unavailable</li>
+                                <li>Adjust daily slot limits</li>
+                                <li>Changes save automatically</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- End Availability View -->
+    </div>
+
+    <!-- Date Appointments Modal -->
+    <div class="availability-modal-overlay" id="dateAppointmentsModal">
+        <div class="availability-modal-content" style="max-width: 600px;">
+            <div class="availability-modal-header">
+                <h3><i class="fas fa-calendar-day"></i> Appointments for <span id="dateAppointmentsTitle"></span></h3>
+                <button class="availability-modal-close" onclick="closeDateAppointmentsModal()">&times;</button>
+            </div>
+            <div class="availability-modal-body">
+                <div class="date-appointments-info" style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <div class="stat-item" style="flex: 1; text-align: center; padding: 10px; background: #e8f5e9; border-radius: 8px;">
+                        <div class="stat-value" id="dateSlotLimit" style="font-size: 1.5rem; font-weight: 600; color: #4CAF50;">0</div>
+                        <div class="stat-label" style="font-size: 0.8rem; color: #666;">Total Slots</div>
+                    </div>
+                    <div class="stat-item" style="flex: 1; text-align: center; padding: 10px; background: #fff3e0; border-radius: 8px;">
+                        <div class="stat-value" id="dateBooked" style="font-size: 1.5rem; font-weight: 600; color: #ff9800;">0</div>
+                        <div class="stat-label" style="font-size: 0.8rem; color: #666;">Booked</div>
+                    </div>
+                    <div class="stat-item" style="flex: 1; text-align: center; padding: 10px; background: #e3f2fd; border-radius: 8px;">
+                        <div class="stat-value" id="dateRemaining" style="font-size: 1.5rem; font-weight: 600; color: #2196F3;">0</div>
+                        <div class="stat-label" style="font-size: 0.8rem; color: #666;">Available</div>
+                    </div>
+                </div>
+                <div id="dateAppointmentsList" style="max-height: 400px; overflow-y: auto;">
+                    <div class="loading-spinner" style="text-align: center; padding: 20px;">
+                        <i class="fas fa-spinner fa-spin"></i> Loading appointments...
+                    </div>
+                </div>
+            </div>
+            <div class="availability-modal-footer">
+                <button class="btn btn-secondary" onclick="closeDateAppointmentsModal()">Close</button>
+                <button class="btn btn-primary" onclick="closeDateAppointmentsModal(); openAvailabilityModal(selectedAvailabilityDate);">
+                    <i class="fas fa-cog"></i> Configure Availability
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Availability Configuration Modal -->
+    <div class="availability-modal-overlay" id="availabilityModal">
+        <div class="availability-modal-content">
+            <div class="availability-modal-header">
+                <h3><i class="fas fa-calendar-day"></i> Configure Date</h3>
+                <button class="availability-modal-close" onclick="closeAvailabilityModal()">&times;</button>
+            </div>
+            <div class="availability-modal-body">
+                <div class="selected-date-display">
+                    <div class="date-text" id="modalDateDisplay">January 8, 2026</div>
+                </div>
+                
+                <div class="availability-options">
+                    <label class="availability-option option-available" onclick="setAvailabilityOption('available')">
+                        <input type="radio" name="availabilityType" value="available" checked>
+                        <div class="option-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="option-details">
+                            <h4>Available</h4>
+                            <p>Accept appointments on this date</p>
+                        </div>
+                    </label>
+                    
+                    <label class="availability-option option-unavailable" onclick="setAvailabilityOption('unavailable')">
+                        <input type="radio" name="availabilityType" value="unavailable">
+                        <div class="option-icon">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <div class="option-details">
+                            <h4>Unavailable</h4>
+                            <p>Block all appointments on this date</p>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="slot-config-section" id="slotConfigSection">
+                    <label for="slotLimitInput">Daily Appointment Limit</label>
+                    <div class="slot-input-group">
+                        <input type="number" id="slotLimitInput" min="1" max="50" value="10" placeholder="Slots">
+                    </div>
+                    <div class="slot-presets">
+                        <button type="button" class="slot-preset-btn" onclick="setSlotPreset(5)">5</button>
+                        <button type="button" class="slot-preset-btn" onclick="setSlotPreset(10)">10</button>
+                        <button type="button" class="slot-preset-btn" onclick="setSlotPreset(15)">15</button>
+                        <button type="button" class="slot-preset-btn" onclick="setSlotPreset(20)">20</button>
+                        <button type="button" class="slot-preset-btn" onclick="setSlotPreset(25)">25</button>
+                    </div>
+                </div>
+            </div>
+            <div class="availability-modal-footer">
+                <button class="btn btn-secondary" onclick="closeAvailabilityModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveAvailability()">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1037,6 +1764,484 @@ try {
     <?php include __DIR__ . '/../../includes/footer.php'; ?>
 
     <script>
+    // =====================================================
+    // VIEW SWITCHING
+    // =====================================================
+    function switchView(view) {
+        // Update tab buttons
+        document.querySelectorAll('.view-tab').forEach(tab => {
+            tab.classList.remove('active');
+            if (tab.getAttribute('onclick')?.includes(view)) {
+                tab.classList.add('active');
+            }
+        });
+        
+        // Update view content
+        document.querySelectorAll('.view-content').forEach(content => content.classList.remove('active'));
+        const viewElement = document.getElementById(view + 'View');
+        if (viewElement) {
+            viewElement.classList.add('active');
+        }
+        
+        // Save current view to localStorage
+        localStorage.setItem('activeAppointmentView', view);
+        
+        // Initialize calendar if switching to availability view
+        if (view === 'availability' && !window.availabilityCalendarInitialized) {
+            initAvailabilityCalendar();
+        }
+    }
+
+    // =====================================================
+    // AVAILABILITY CALENDAR
+    // =====================================================
+    let availabilityCalendar = null;
+    let availabilityData = {
+        unavailableDates: [],
+        slotLimits: {},
+        bookedSlots: {},
+        defaultSlotLimit: 10
+    };
+    let selectedAvailabilityDate = null;
+    let currentAvailabilityType = 'available';
+
+    async function loadAvailabilityData() {
+        try {
+            const response = await fetch('/connect/api/availability/get.php');
+            const result = await response.json();
+            
+            if (result.success) {
+                // Ensure proper data structure
+                availabilityData = {
+                    unavailableDates: result.data.unavailableDates || [],
+                    slotLimits: result.data.slotLimits || {},
+                    bookedSlots: result.data.bookedSlots || {},
+                    defaultSlotLimit: result.data.defaultSlotLimit || 10
+                };
+                updateAvailabilityStats();
+                return true;
+            } else {
+                console.error('Failed to load availability:', result.message);
+                return false;
+            }
+        } catch (error) {
+            console.error('Error loading availability:', error);
+            return false;
+        }
+    }
+
+    function getDateStatus(dateStr) {
+        // Weekends are unavailable by default (0 = Sunday, 6 = Saturday)
+        const checkDate = new Date(dateStr + 'T00:00:00');
+        const dayOfWeek = checkDate.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            return { status: 'weekend', slots: 0, remaining: 0 };
+        }
+        
+        // Check if unavailable
+        if (availabilityData.unavailableDates.includes(dateStr)) {
+            return { status: 'unavailable', slots: 0, remaining: 0 };
+        }
+        
+        // Get slot limit
+        const slotLimit = availabilityData.slotLimits[dateStr] || availabilityData.defaultSlotLimit;
+        const booked = availabilityData.bookedSlots[dateStr] || 0;
+        const remaining = Math.max(0, slotLimit - booked);
+        
+        if (remaining === 0) {
+            return { status: 'full', slots: slotLimit, remaining: 0 };
+        } else if (remaining <= 3) {
+            return { status: 'limited', slots: slotLimit, remaining: remaining };
+        } else {
+            return { status: 'available', slots: slotLimit, remaining: remaining };
+        }
+    }
+
+    function updateAvailabilityStats() {
+        const unavailableCount = availabilityData.unavailableDates.length;
+        let totalSlots = 0;
+        let totalBooked = 0;
+        
+        // Calculate from slot limits
+        Object.entries(availabilityData.slotLimits).forEach(([date, slots]) => {
+            if (!availabilityData.unavailableDates.includes(date)) {
+                totalSlots += slots;
+            }
+        });
+        
+        // Calculate booked
+        Object.values(availabilityData.bookedSlots).forEach(booked => {
+            totalBooked += booked;
+        });
+        
+        document.getElementById('statUnavailable').textContent = unavailableCount;
+        document.getElementById('statTotalSlots').textContent = totalSlots;
+        document.getElementById('statBooked').textContent = totalBooked;
+        document.getElementById('statAvailable').textContent = Math.max(0, totalSlots - totalBooked);
+    }
+
+    async function initAvailabilityCalendar() {
+        // Load data first
+        await loadAvailabilityData();
+        
+        const calendarEl = document.getElementById('availabilityCalendar');
+        
+        availabilityCalendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: ''
+            },
+            height: 'auto',
+            selectable: true,
+            
+            // Custom date cell rendering
+            dayCellDidMount: function(arg) {
+                // Use local date formatting to avoid timezone issues
+                const year = arg.date.getFullYear();
+                const month = String(arg.date.getMonth() + 1).padStart(2, '0');
+                const day = String(arg.date.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+                const status = getDateStatus(dateStr);
+                
+                // Add custom class based on status
+                switch(status.status) {
+                    case 'weekend':
+                    case 'unavailable':
+                        arg.el.classList.add('unavailable-date');
+                        // Make weekends non-clickable visually
+                        if (status.status === 'weekend') {
+                            arg.el.style.cursor = 'not-allowed';
+                        }
+                        break;
+                    case 'full':
+                        arg.el.classList.add('full-slots');
+                        break;
+                    case 'limited':
+                        arg.el.classList.add('limited-slots');
+                        break;
+                    case 'available':
+                        arg.el.classList.add('available-date');
+                        break;
+                }
+                
+                // Add slot indicator
+                const indicator = document.createElement('div');
+                indicator.className = 'slot-indicator';
+                
+                if (status.status === 'weekend' || status.status === 'unavailable') {
+                    indicator.className += ' slots-unavailable';
+                    indicator.innerHTML = '<i class="fas fa-ban"></i>';
+                    // Make weekends visually non-clickable
+                    if (status.status === 'weekend') {
+                        indicator.style.cursor = 'not-allowed';
+                    }
+                } else if (status.status === 'full') {
+                    indicator.className += ' slots-full';
+                    indicator.textContent = 'Full';
+                } else {
+                    indicator.className += status.status === 'limited' ? ' slots-limited' : ' slots-available';
+                    indicator.textContent = `${status.remaining}`;
+                    // Make clickable to show appointments
+                    indicator.style.cursor = 'pointer';
+                    indicator.title = 'Click to view appointments';
+                }
+                
+                const dayFrame = arg.el.querySelector('.fc-daygrid-day-frame');
+                if (dayFrame) {
+                    dayFrame.appendChild(indicator);
+                }
+            },
+            
+            // Handle date click
+            dateClick: function(info) {
+                selectedAvailabilityDate = info.dateStr;
+                const status = getDateStatus(info.dateStr);
+                
+                // Prevent clicking on weekends (make them non-clickable)
+                if (status.status === 'weekend') {
+                    return; // Do nothing for weekends
+                }
+                
+                // If it's unavailable (not weekend), show config modal
+                // If it has bookings, show appointments modal
+                if (status.status === 'unavailable') {
+                    openAvailabilityModal(info.dateStr);
+                } else {
+                    showDateAppointmentsModal(info.dateStr, status);
+                }
+            }
+        });
+        
+        availabilityCalendar.render();
+        window.availabilityCalendarInitialized = true;
+    }
+
+    function formatDateDisplay(dateStr) {
+        const date = new Date(dateStr + 'T00:00:00');
+        return date.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+    }
+
+    function openAvailabilityModal(dateStr) {
+        const status = getDateStatus(dateStr);
+        
+        document.getElementById('modalDateDisplay').textContent = formatDateDisplay(dateStr);
+        document.getElementById('availabilityModal').classList.add('active');
+        
+        // Set current availability type
+        if (status.status === 'unavailable') {
+            setAvailabilityOption('unavailable');
+        } else {
+            setAvailabilityOption('available');
+            document.getElementById('slotLimitInput').value = 
+                availabilityData.slotLimits[dateStr] || availabilityData.defaultSlotLimit;
+        }
+    }
+
+    function closeAvailabilityModal() {
+        document.getElementById('availabilityModal').classList.remove('active');
+    }
+
+    // Date Appointments Modal Functions
+    async function showDateAppointmentsModal(dateStr, status) {
+        document.getElementById('dateAppointmentsTitle').textContent = formatDateDisplay(dateStr);
+        document.getElementById('dateSlotLimit').textContent = status.slots;
+        document.getElementById('dateBooked').textContent = status.slots - status.remaining;
+        document.getElementById('dateRemaining').textContent = status.remaining;
+        document.getElementById('dateAppointmentsModal').classList.add('active');
+        
+        // Load appointments for this date
+        await loadDateAppointments(dateStr);
+    }
+    
+    function closeDateAppointmentsModal() {
+        document.getElementById('dateAppointmentsModal').classList.remove('active');
+    }
+    
+    async function loadDateAppointments(dateStr) {
+        const listContainer = document.getElementById('dateAppointmentsList');
+        listContainer.innerHTML = '<div class="loading-spinner" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading appointments...</div>';
+        
+        try {
+            // Filter appointments for this date from the PHP data
+            const allAppointments = <?php echo json_encode($appointments); ?>;
+            const dateAppointments = allAppointments.filter(apt => apt.appointment_date === dateStr);
+            
+            if (dateAppointments.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="no-appointments">
+                        <i class="fas fa-calendar-check"></i>
+                        <h4>No Appointments</h4>
+                        <p>There are no scheduled appointments for this date.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort by time
+            dateAppointments.sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
+            
+            let html = '';
+            dateAppointments.forEach(apt => {
+                const statusClass = apt.status.toLowerCase().replace(/\s+/g, '-');
+                const time = formatTime12Hour(apt.appointment_time);
+                
+                let statusBg = '#2196F3';
+                if (apt.status === 'Confirmed') statusBg = '#4CAF50';
+                else if (apt.status === 'Done') statusBg = '#9e9e9e';
+                else if (apt.status === 'Cancelled') statusBg = '#f44336';
+                else if (apt.status === 'No Show') statusBg = '#ff9800';
+                
+                html += `
+                    <div class="appointment-list-item status-${statusClass}" data-appointment-id="${apt.id}" onclick="goToAppointmentFromModal('${apt.id}')">
+                        <div class="appointment-list-time">${time}</div>
+                        <div class="appointment-list-details">
+                            <div class="appointment-list-patient">${apt.first_name} ${apt.last_name}</div>
+                            <div class="appointment-list-reason">${apt.reason || 'No reason provided'}</div>
+                        </div>
+                        <span class="appointment-list-status" style="background: ${statusBg}; color: white;">${apt.status}</span>
+                    </div>
+                `;
+            });
+            
+            listContainer.innerHTML = html;
+        } catch (error) {
+            console.error('Error loading appointments:', error);
+            listContainer.innerHTML = `
+                <div class="no-appointments">
+                    <i class="fas fa-exclamation-circle" style="color: #f44336;"></i>
+                    <h4>Error Loading Appointments</h4>
+                    <p>Please try again later.</p>
+                </div>
+            `;
+        }
+    }
+    
+    function formatTime12Hour(time24) {
+        const [hours, minutes] = time24.split(':');
+        const hour = parseInt(hours, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        return `${hour12}:${minutes} ${ampm}`;
+    }
+    
+    function goToAppointmentFromModal(appointmentId) {
+        // Close the modal
+        closeDateAppointmentsModal();
+        
+        // Switch to appointments view
+        switchView('appointments');
+        
+        // Small delay to ensure view has switched, then highlight
+        setTimeout(() => {
+            highlightAppointmentInList(appointmentId);
+        }, 500);
+    }
+    
+    function highlightAppointmentInList(appointmentId) {
+        // Find all elements with this appointment ID (could be table row or card)
+        const elements = document.querySelectorAll('[data-appointment-id="' + appointmentId + '"]');
+        
+        if (elements.length > 0) {
+            elements.forEach(element => {
+                // Scroll into view
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Add highlight class
+                element.classList.add('highlighted');
+                
+                // Remove highlight after animation
+                setTimeout(() => {
+                    element.classList.remove('highlighted');
+                }, 3000);
+            });
+        }
+    }
+
+    function setAvailabilityOption(type) {
+        currentAvailabilityType = type;
+        
+        // Update UI
+        document.querySelectorAll('.availability-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        
+        const selectedOption = document.querySelector(`.option-${type}`);
+        if (selectedOption) {
+            selectedOption.classList.add('selected');
+            selectedOption.querySelector('input').checked = true;
+        }
+        
+        // Show/hide slot config
+        const slotSection = document.getElementById('slotConfigSection');
+        if (type === 'available') {
+            slotSection.classList.remove('hidden');
+        } else {
+            slotSection.classList.add('hidden');
+        }
+    }
+
+    function setSlotPreset(value) {
+        document.getElementById('slotLimitInput').value = value;
+        
+        // Update preset buttons
+        document.querySelectorAll('.slot-preset-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (parseInt(btn.textContent) === value) {
+                btn.classList.add('active');
+            }
+        });
+    }
+
+    async function saveAvailability() {
+        if (!selectedAvailabilityDate) {
+            showToast('No date selected', 'error');
+            return;
+        }
+        
+        const isAvailable = currentAvailabilityType === 'available';
+        const slotLimit = parseInt(document.getElementById('slotLimitInput').value) || availabilityData.defaultSlotLimit;
+        
+        try {
+            const response = await fetch('/connect/api/availability/save.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: selectedAvailabilityDate,
+                    is_available: isAvailable,
+                    slot_limit: slotLimit
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Update local data from the response
+                if (result.data) {
+                    availabilityData.unavailableDates = result.data.unavailableDates || [];
+                    availabilityData.slotLimits = result.data.slotLimits || {};
+                } else {
+                    // Fallback: update manually if no data returned
+                    if (!isAvailable) {
+                        if (!availabilityData.unavailableDates.includes(selectedAvailabilityDate)) {
+                            availabilityData.unavailableDates.push(selectedAvailabilityDate);
+                        }
+                        delete availabilityData.slotLimits[selectedAvailabilityDate];
+                    } else {
+                        const index = availabilityData.unavailableDates.indexOf(selectedAvailabilityDate);
+                        if (index > -1) {
+                            availabilityData.unavailableDates.splice(index, 1);
+                        }
+                        availabilityData.slotLimits[selectedAvailabilityDate] = slotLimit;
+                    }
+                }
+                
+                // Update stats
+                updateAvailabilityStats();
+                
+                // Refresh calendar to reflect changes
+                if (availabilityCalendar) {
+                    availabilityCalendar.destroy();
+                    await initAvailabilityCalendar();
+                }
+                
+                closeAvailabilityModal();
+                showToast('Availability updated successfully', 'success');
+            } else {
+                showToast(result.message || 'Failed to save', 'error');
+            }
+        } catch (error) {
+            console.error('Error saving availability:', error);
+            showToast('Error saving availability', 'error');
+        }
+    }
+
+    // Close availability modal on outside click
+    document.getElementById('availabilityModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAvailabilityModal();
+        }
+    });
+    
+    // Close date appointments modal on outside click
+    document.getElementById('dateAppointmentsModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDateAppointmentsModal();
+        }
+    });
+
+    // =====================================================
+    // ORIGINAL APPOINTMENT FUNCTIONS
+    // =====================================================
+    
     // Show/hide modal functions
     function showAddAppointmentModal() {
         document.getElementById('addAppointmentModal').style.display = 'block';
@@ -1048,6 +2253,16 @@ try {
     
     // Close modal when clicking on X or outside the modal
     document.addEventListener('DOMContentLoaded', function() {
+        // Check if we should open the Today's Appointments modal
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('openTodayModal') === '1') {
+            openTodayAppointmentsModal();
+            // Clean up URL
+            const url = new URL(window.location);
+            url.searchParams.delete('openTodayModal');
+            window.history.replaceState({}, '', url);
+        }
+        
         // Close when clicking the X button
         const closeButtons = document.querySelectorAll('.modal-close');
         closeButtons.forEach(button => {
@@ -1195,7 +2410,23 @@ try {
 
     // Check for URL parameters and show toast if needed
     document.addEventListener('DOMContentLoaded', function() {
+        // Restore active tab from localStorage
+        const savedView = localStorage.getItem('activeAppointmentView');
+        if (savedView && (savedView === 'appointments' || savedView === 'availability')) {
+            switchView(savedView);
+        }
+        
         const urlParams = new URLSearchParams(window.location.search);
+        
+        // Check if we should open the Today's Appointments modal
+        if (urlParams.get('openTodayModal') === '1') {
+            openTodayAppointmentsModal();
+            // Clean up URL
+            const url = new URL(window.location);
+            url.searchParams.delete('openTodayModal');
+            window.history.replaceState({}, '', url);
+        }
+        
         const smsStatus = urlParams.get('sms_status');
         const statusUpdate = urlParams.get('status_update');
         const message = urlParams.get('message');

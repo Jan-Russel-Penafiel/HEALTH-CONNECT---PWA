@@ -552,6 +552,7 @@ if ($appointment['date_of_birth']) {
 </head>
 <body>
     <?php include __DIR__ . '/../../includes/navbar.php'; ?>
+    <?php include __DIR__ . '/../../includes/today_appointments_banner.php'; ?>
 
     <!-- Toast container -->
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
@@ -788,6 +789,7 @@ if ($appointment['date_of_birth']) {
             <!-- Right Column -->
             <div>
                 <!-- Quick Actions -->
+                <?php if ($appointment['status_id'] != 5): // Hide Quick Actions for No Show ?>
                 <div class="card">
                     <div class="card-header">
                         <i class="fas fa-bolt"></i>
@@ -813,10 +815,6 @@ if ($appointment['date_of_birth']) {
                                 <i class="fas fa-check-double"></i>
                                 Mark as Done
                             </button>
-                            <button onclick="updateStatus(<?php echo $appointment_id; ?>, 'cancelled')" class="btn btn-danger">
-                                <i class="fas fa-times"></i>
-                                Cancel Appointment
-                            </button>
                             <button onclick="updateStatus(<?php echo $appointment_id; ?>, 'no show')" class="btn btn-warning">
                                 <i class="fas fa-user-times"></i>
                                 Mark as No Show
@@ -834,6 +832,7 @@ if ($appointment['date_of_birth']) {
                         </a>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

@@ -1,0 +1,10 @@
+{
+    "unavailableDates": [
+        "2026-01-14"
+    ],
+    "slotLimits": {
+        "2026-01-16": 1
+    },
+    "defaultSlotLimit": 10,
+    "lastUpdated": "2026-01-19T04:30:32+01:00"
+}

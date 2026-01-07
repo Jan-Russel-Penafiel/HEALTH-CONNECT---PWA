@@ -398,6 +398,23 @@ foreach ($appointments as $appointment) {
             </div>
         </div>
         
+        <?php if (isset($_GET['success']) && $_GET['success'] == 1): ?>
+            <div class="alert alert-success" style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <i class="fas fa-check-circle"></i>
+                <strong>Success!</strong> Your appointment has been scheduled successfully!
+            </div>
+        <?php endif; ?>
+        
+        <?php if (isset($_SESSION['success_message'])): ?>
+            <div class="alert alert-success" style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <i class="fas fa-check-circle"></i>
+                <?php 
+                    echo htmlspecialchars($_SESSION['success_message']); 
+                    unset($_SESSION['success_message']);
+                ?>
+            </div>
+        <?php endif; ?>
+        
         <div class="dashboard-header">
             <div></div>
             <a href="schedule_appointment.php" class="btn">
@@ -405,10 +422,141 @@ foreach ($appointments as $appointment) {
             </a>
         </div>
         
+        <!-- All Appointments -->
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h3>All Appointments</h3>
+                <span style="color: #666; font-size: 0.9rem;"><?php echo count($appointments); ?> total</span>
+            </div>
+            
+            <?php if (count($appointments) > 0): ?>
+                <!-- Desktop Table View -->
+                <table class="appointments-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Health Worker</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($appointments as $appointment): ?>
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600; color: #2c3e50;">
+                                        <?php echo date('M j, Y', strtotime($appointment['appointment_date'])); ?>
+                                    </div>
+                                    <div style="color: #7f8c8d; font-size: 0.9rem;">
+                                        <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; color: #2c3e50;">
+                                        <?php echo htmlspecialchars($appointment['health_worker_name']); ?>
+                                    </div>
+                                    <div style="color: #7f8c8d; font-size: 0.9rem;">
+                                        <?php echo htmlspecialchars($appointment['health_worker_position']); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <?php echo !empty($appointment['reason']) ? htmlspecialchars($appointment['reason']) : 'Not specified'; ?>
+                                </td>
+                                <td>
+                                    <span class="status <?php echo strtolower($appointment['status_name']); ?>">
+                                        <?php echo htmlspecialchars($appointment['status_name']); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <?php if ($appointment['status_id'] == 2): ?>
+                                            <a href="generate_slip.php?appointment_id=<?php echo $appointment['appointment_id']; ?>" 
+                                               class="btn-print" target="_blank">
+                                                <i class="fas fa-print"></i> Print Slip
+                                            </a>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (in_array($appointment['status_id'], [1, 2])): ?>
+                                            <form method="POST" onsubmit="return confirm('Are you sure you want to cancel this appointment?');" style="display: inline;">
+                                                <input type="hidden" name="appointment_id" value="<?php echo $appointment['appointment_id']; ?>">
+                                                <button type="submit" name="cancel_appointment" class="btn-danger">
+                                                    <i class="fas fa-times"></i> Cancel
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                
+                <!-- Mobile Card View -->
+                <div class="appointments-grid">
+                    <?php foreach ($appointments as $appointment): ?>
+                        <div class="appointment-card" data-appointment-id="<?php echo $appointment['appointment_id']; ?>">
+                            <div class="appointment-date">
+                                <?php echo date('l, M j, Y', strtotime($appointment['appointment_date'])); ?>
+                            </div>
+                            <div class="appointment-time">
+                                <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
+                            </div>
+                            
+                            <div class="health-worker-info">
+                                <div class="health-worker-name">
+                                    <?php echo htmlspecialchars($appointment['health_worker_name']); ?>
+                                </div>
+                                <div class="health-worker-position">
+                                    <?php echo htmlspecialchars($appointment['health_worker_position']); ?>
+                                </div>
+                            </div>
+                            
+                            <div class="appointment-reason">
+                                <strong>Reason:</strong><br>
+                                <?php echo !empty($appointment['reason']) ? htmlspecialchars($appointment['reason']) : 'Not specified'; ?>
+                            </div>
+                            
+                            <div>
+                                <span class="status <?php echo strtolower($appointment['status_name']); ?>">
+                                    <?php echo htmlspecialchars($appointment['status_name']); ?>
+                                </span>
+                            </div>
+                            
+                            <div class="card-actions">
+                                <?php if ($appointment['status_id'] == 2): ?>
+                                    <a href="generate_slip.php?appointment_id=<?php echo $appointment['appointment_id']; ?>" 
+                                       class="btn-print" target="_blank">
+                                        <i class="fas fa-print"></i> Print Slip
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <?php if (in_array($appointment['status_id'], [1, 2])): ?>
+                                    <form method="POST" onsubmit="return confirm('Are you sure you want to cancel this appointment?');">
+                                        <input type="hidden" name="appointment_id" value="<?php echo $appointment['appointment_id']; ?>">
+                                        <button type="submit" name="cancel_appointment" class="btn-danger">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="no-data">
+                    <i class="fas fa-calendar-alt"></i>
+                    <p>No appointments found</p>
+                    <a href="schedule_appointment.php" class="btn">Schedule Your First Appointment</a>
+                </div>
+            <?php endif; ?>
+        </div>
+        
         <!-- Upcoming Appointments -->
         <div class="dashboard-section">
             <div class="section-header">
                 <h3>Upcoming Appointments</h3>
+                <span style="color: #666; font-size: 0.9rem;"><?php echo count($upcoming); ?> upcoming</span>
             </div>
             
             <?php if (count($upcoming) > 0): ?>
@@ -539,6 +687,7 @@ foreach ($appointments as $appointment) {
         <div class="dashboard-section">
             <div class="section-header">
                 <h3>Past Appointments</h3>
+                <span style="color: #666; font-size: 0.9rem;"><?php echo count($past); ?> past</span>
             </div>
             
             <?php if (count($past) > 0): ?>
@@ -629,6 +778,7 @@ foreach ($appointments as $appointment) {
         <div class="dashboard-section">
             <div class="section-header">
                 <h3>Cancelled Appointments</h3>
+                <span style="color: #666; font-size: 0.9rem;"><?php echo count($cancelled); ?> cancelled</span>
             </div>
             
             <?php if (count($cancelled) > 0): ?>
