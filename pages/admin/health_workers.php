@@ -761,8 +761,11 @@ try {
                     </div>
                     
                     <div class="form-group">
-                        <label for="address">Address</label>
-                        <textarea id="address" name="address" class="form-control" rows="2"></textarea>
+                        <label>Address</label>
+                        <?php 
+                        require_once __DIR__ . '/../../includes/psgc_address.php';
+                        renderPsgcAddress('hw', false);
+                        ?>
                     </div>
                     
                     <div class="form-grid">
@@ -874,5 +877,9 @@ try {
             }
         }
     </script>
+    <?php 
+    renderPsgcAddressStyles();
+    renderPsgcAddressScript();
+    ?>
 </body>
 </html> 

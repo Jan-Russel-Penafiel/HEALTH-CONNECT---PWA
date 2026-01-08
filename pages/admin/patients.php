@@ -1383,10 +1383,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="address">Address</label>
-                        <textarea id="address" name="address" class="form-control" required></textarea>
+                <div class="form-row" style="display: block;">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Address</label>
+                        <?php 
+                        require_once __DIR__ . '/../../includes/psgc_address.php';
+                        renderPsgcAddress('add_patient', true);
+                        ?>
                     </div>
                 </div>
 
@@ -1880,5 +1883,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     
     </script>
+    <?php 
+    renderPsgcAddressStyles();
+    renderPsgcAddressScript();
+    ?>
 </body>
 </html> 

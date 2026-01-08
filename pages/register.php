@@ -871,10 +871,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             <div class="form-section" style="border-bottom: none; margin-bottom: 15px;">
                 <h3 class="form-section-title"><i class="fas fa-map-marker-alt"></i> Address Information</h3>
-                <div class="form-group">
-                    <label for="address">Complete Address</label>
-                    <textarea id="address" name="address" class="form-control" rows="3" placeholder="Your complete address" required></textarea>
-                </div>
+                <?php 
+                require_once __DIR__ . '/../includes/psgc_address.php';
+                renderPsgcAddress('reg', true);
+                ?>
             </div>
             
             <div class="form-section" style="border-bottom: none; margin-bottom: 15px;">
@@ -1091,5 +1091,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
         });
     </script>
+    <?php 
+    renderPsgcAddressStyles();
+    renderPsgcAddressScript();
+    ?>
 </body>
 </html> 

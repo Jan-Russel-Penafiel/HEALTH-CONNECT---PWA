@@ -1134,10 +1134,13 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="form-group"></div>
                     </div>
                     
-                    <div class="form-grid">
-                        <div class="form-group address-group">
-                            <label for="address">Address</label>
-                            <textarea id="address" name="address" class="form-control" rows="2" required placeholder="Full address"></textarea>
+                    <div class="form-grid" style="display: block;">
+                        <div class="form-group address-group" style="grid-column: 1 / -1;">
+                            <label>Address</label>
+                            <?php 
+                            require_once __DIR__ . '/../../includes/psgc_address.php';
+                            renderPsgcAddress('hw_patient', true);
+                            ?>
                         </div>
                     </div>
 
@@ -1294,5 +1297,9 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
         });
     </script>
+    <?php 
+    renderPsgcAddressStyles();
+    renderPsgcAddressScript();
+    ?>
 </body>
 </html> 

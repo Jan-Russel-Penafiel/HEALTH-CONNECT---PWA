@@ -151,7 +151,7 @@ try {
               JOIN health_workers hw ON a.health_worker_id = hw.health_worker_id
               JOIN users h ON hw.user_id = h.user_id
               JOIN appointment_status s ON a.status_id = s.status_id
-              ORDER BY a.appointment_date DESC, a.appointment_time DESC
+              ORDER BY a.created_at ASC
               LIMIT 5";
     $stmt = $conn->prepare($query);
     $stmt->execute();
