@@ -2593,27 +2593,21 @@ try {
                             try {
                                 const appointmentData = JSON.parse(code.data);
                                 if (appointmentData.appointment_id) {
-                                    // Remove highlight from any previously highlighted card
-                                    const previousHighlight = document.querySelector('.appointment-card.highlighted');
-                                    if (previousHighlight) {
-                                        previousHighlight.classList.remove('highlighted');
-                                    }
-
-                                    // Find and highlight the corresponding appointment card
-                                    const appointmentCard = document.querySelector(`.appointment-card[data-appointment-id="${appointmentData.appointment_id}"]`);
-                                    if (appointmentCard) {
-                                        appointmentCard.classList.add('highlighted');
-                                        appointmentCard.scrollIntoView({ 
-                                            behavior: 'smooth', 
-                                            block: 'center' 
-                                        });
+                                    // Close the scanner first
+                                    closeQRScanner();
+                                    
+                                    // Switch to appointments view if not already there
+                                    switchView('appointments');
+                                    
+                                    // Small delay to ensure view has switched
+                                    setTimeout(() => {
+                                        // Use the existing highlightAppointmentInList function
+                                        highlightAppointmentInList(appointmentData.appointment_id);
                                         
                                         // Show success notification
                                         showNotification();
-                                    }
-
-                                    // Close the scanner after successful scan
-                                    closeQRScanner();
+                                    }, 300);
+                                    
                                     return;
                                 }
                             } catch (err) {
