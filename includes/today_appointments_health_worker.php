@@ -127,7 +127,7 @@ $hw_banner_class = $_SESSION['hw_banner_visible'] ? '' : 'hidden';
 
 .today-hw-dropdown {
     position: absolute;
-    top: calc(100% + 0.5rem);
+    top: 100%;
     right: 0;
     background: white;
     border-radius: 8px;
