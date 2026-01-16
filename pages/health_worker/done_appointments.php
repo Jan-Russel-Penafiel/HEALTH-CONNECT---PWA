@@ -51,6 +51,31 @@ try {
     error_log("Error fetching appointments: " . $e->getMessage());
     $appointments = [];
 }
+
+// Get working hours for time filter
+$working_hours = [
+    'start' => '09:00',
+    'end' => '17:00',
+    'interval' => 30
+];
+
+try {
+    $settings_query = "SELECT name, value FROM settings WHERE name IN ('working_hours_start', 'working_hours_end', 'appointment_duration')";
+    $stmt = $pdo->query($settings_query);
+    $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    
+    if (isset($settings['working_hours_start'])) {
+        $working_hours['start'] = $settings['working_hours_start'];
+    }
+    if (isset($settings['working_hours_end'])) {
+        $working_hours['end'] = $settings['working_hours_end'];
+    }
+    if (isset($settings['appointment_duration'])) {
+        $working_hours['interval'] = (int)$settings['appointment_duration'];
+    }
+} catch (PDOException $e) {
+    error_log("Error fetching settings: " . $e->getMessage());
+}
 ?>
 
 <!DOCTYPE html>
@@ -60,6 +85,9 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Completed Appointments - HealthConnect</title>
     <?php include __DIR__ . '/../../includes/header_links.php'; ?>
+    <!-- jsPDF for printing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         /* Desktop Table Layout */
         .table-container {
@@ -183,9 +211,111 @@ try {
             gap: 1rem;
         }
 
+        /* Filter Toolbar Styles */
+        .filter-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 0;
+        }
+
+        .filter-input,
+        .filter-select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background: white;
+        }
+
+        .filter-input {
+            min-width: 200px;
+        }
+
+        .filter-select {
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-print {
+            padding: 10px 20px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .btn-print:hover {
+            background: #1976D2;
+        }
+
+        .appointment-row-hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .filter-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-input,
+            .filter-select {
+                width: 100%;
+            }
+        }
+
         /* Mobile Card Layout */
         .appointments-grid {
             display: none;
+        }
+
+        .appointment-card.appointment-row-hidden {
+            display: none !important;
         }
 
         @media (max-width: 991px) {
@@ -282,9 +412,38 @@ try {
         </div>
         <?php else: ?>
         
+        <!-- Filter Section -->
+        <div class="filter-toolbar">
+            <div class="filter-group">
+                <label for="searchInput"><i class="fas fa-search"></i> Search:</label>
+                <input type="text" id="searchInput" class="filter-input" placeholder="Search patient name, phone, email..." oninput="filterAppointments()">
+                
+                <label for="dateFilter"><i class="fas fa-calendar"></i> Date:</label>
+                <input type="date" id="dateFilter" class="filter-input" onchange="filterAppointments()">
+                
+                <label for="timeFilter"><i class="fas fa-clock"></i> Time:</label>
+                <select id="timeFilter" class="filter-select" onchange="filterAppointments()">
+                    <option value="all">All Times</option>
+                    <?php
+                    $start = strtotime($working_hours['start']);
+                    $end = strtotime($working_hours['end']);
+                    $interval = $working_hours['interval'] * 60;
+                    for ($time = $start; $time < $end; $time += $interval) {
+                        echo '<option value="' . date('H:i', $time) . '">' . date('g:i A', $time) . '</option>';
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button class="btn-print" onclick="printFilteredAppointments()">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </div>
+        </div>
+        
         <!-- Desktop Table Layout -->
         <div class="table-container">
-            <table class="appointments-table">
+            <table class="appointments-table" id="appointmentsTable">
                 <thead>
                     <tr>
                         <th>Date & Time</th>
@@ -294,8 +453,16 @@ try {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($appointments as $appointment): ?>
-                    <tr>
+                    <?php foreach ($appointments as $appointment): 
+                        $timeValue = date('H:i', strtotime($appointment['appointment_time']));
+                        $dateValue = date('Y-m-d', strtotime($appointment['appointment_date']));
+                        $patientName = $appointment['first_name'] . ' ' . $appointment['last_name'];
+                    ?>
+                    <tr data-appointment-time="<?php echo $timeValue; ?>" 
+                        data-appointment-date="<?php echo $dateValue; ?>" 
+                        data-patient-name="<?php echo htmlspecialchars($patientName); ?>" 
+                        data-patient-email="<?php echo htmlspecialchars($appointment['email']); ?>" 
+                        data-patient-phone="<?php echo htmlspecialchars($appointment['patient_phone']); ?>">
                         <td>
                             <div class="datetime-info">
                                 <div class="appointment-date">
@@ -335,8 +502,17 @@ try {
 
         <!-- Mobile Card Layout -->
         <div class="appointments-grid">
-            <?php foreach ($appointments as $appointment): ?>
-            <div class="appointment-card">
+            <?php foreach ($appointments as $appointment): 
+                $timeValue = date('H:i', strtotime($appointment['appointment_time']));
+                $dateValue = date('Y-m-d', strtotime($appointment['appointment_date']));
+                $patientName = $appointment['first_name'] . ' ' . $appointment['last_name'];
+            ?>
+            <div class="appointment-card" 
+                 data-appointment-time="<?php echo $timeValue; ?>" 
+                 data-appointment-date="<?php echo $dateValue; ?>" 
+                 data-patient-name="<?php echo htmlspecialchars($patientName); ?>" 
+                 data-patient-email="<?php echo htmlspecialchars($appointment['email']); ?>" 
+                 data-patient-phone="<?php echo htmlspecialchars($appointment['patient_phone']); ?>">
                 <div class="appointment-date">
                     <i class="fas fa-calendar"></i>
                     <span><?php echo date('F d, Y', strtotime($appointment['appointment_date'])); ?></span>
@@ -372,5 +548,186 @@ try {
     </div>
 
     <?php include __DIR__ . '/../../includes/footer.php'; ?>
+
+    <script>
+    function filterAppointments() {
+        const searchValue = document.getElementById('searchInput').value.toLowerCase();
+        const dateValue = document.getElementById('dateFilter').value;
+        const timeValue = document.getElementById('timeFilter').value;
+        
+        // Get all rows (both table and cards)
+        const tableRows = document.querySelectorAll('#appointmentsTable tbody tr');
+        const cards = document.querySelectorAll('.appointments-grid .appointment-card');
+        
+        // Filter table rows
+        tableRows.forEach(row => {
+            const patientName = row.dataset.patientName?.toLowerCase() || '';
+            const patientEmail = row.dataset.patientEmail?.toLowerCase() || '';
+            const patientPhone = row.dataset.patientPhone?.toLowerCase() || '';
+            const rowDate = row.dataset.appointmentDate || '';
+            const rowTime = row.dataset.appointmentTime || '';
+            
+            let showRow = true;
+            
+            // Search filter
+            if (searchValue) {
+                showRow = patientName.includes(searchValue) || 
+                         patientEmail.includes(searchValue) || 
+                         patientPhone.includes(searchValue);
+            }
+            
+            // Date filter
+            if (showRow && dateValue) {
+                showRow = rowDate === dateValue;
+            }
+            
+            // Time filter
+            if (showRow && timeValue !== 'all') {
+                showRow = rowTime === timeValue;
+            }
+            
+            if (showRow) {
+                row.classList.remove('appointment-row-hidden');
+            } else {
+                row.classList.add('appointment-row-hidden');
+            }
+        });
+        
+        // Filter cards
+        cards.forEach(card => {
+            const patientName = card.dataset.patientName?.toLowerCase() || '';
+            const patientEmail = card.dataset.patientEmail?.toLowerCase() || '';
+            const patientPhone = card.dataset.patientPhone?.toLowerCase() || '';
+            const cardDate = card.dataset.appointmentDate || '';
+            const cardTime = card.dataset.appointmentTime || '';
+            
+            let showCard = true;
+            
+            // Search filter
+            if (searchValue) {
+                showCard = patientName.includes(searchValue) || 
+                          patientEmail.includes(searchValue) || 
+                          patientPhone.includes(searchValue);
+            }
+            
+            // Date filter
+            if (showCard && dateValue) {
+                showCard = cardDate === dateValue;
+            }
+            
+            // Time filter
+            if (showCard && timeValue !== 'all') {
+                showCard = cardTime === timeValue;
+            }
+            
+            if (showCard) {
+                card.classList.remove('appointment-row-hidden');
+            } else {
+                card.classList.add('appointment-row-hidden');
+            }
+        });
+        
+        // Update count
+        const visibleRows = document.querySelectorAll('#appointmentsTable tbody tr:not(.appointment-row-hidden)');
+        console.log(`Showing ${visibleRows.length} completed appointments`);
+    }
+    
+    function printFilteredAppointments() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Get filter values for title
+        const searchValue = document.getElementById('searchInput').value;
+        const dateValue = document.getElementById('dateFilter').value;
+        const timeSelect = document.getElementById('timeFilter');
+        const timeValue = timeSelect.value;
+        const timeText = timeValue === 'all' ? 'All Times' : timeSelect.options[timeSelect.selectedIndex].text;
+        
+        // Title
+        doc.setFontSize(18);
+        doc.setTextColor(76, 175, 80);
+        doc.text('HealthConnect - Completed Appointments', 14, 20);
+        
+        // Subtitle with filter info
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        let filterInfo = [];
+        if (searchValue) filterInfo.push(`Search: ${searchValue}`);
+        if (dateValue) filterInfo.push(`Date: ${new Date(dateValue + 'T00:00:00').toLocaleDateString()}`);
+        if (timeValue !== 'all') filterInfo.push(`Time: ${timeText}`);
+        
+        const filterText = filterInfo.length > 0 ? filterInfo.join(' | ') : 'All Appointments';
+        doc.text(`Filters: ${filterText}`, 14, 28);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 34);
+        
+        // Collect visible appointment data
+        const rows = document.querySelectorAll('#appointmentsTable tbody tr:not(.appointment-row-hidden)');
+        const tableData = [];
+        
+        rows.forEach((row, index) => {
+            const dateTime = row.querySelector('.appointment-time i')?.nextSibling?.textContent.trim() || '';
+            const date = row.querySelector('.appointment-date')?.textContent.trim() || '';
+            const dateOnly = date.replace(/.*?\s/, '').trim(); // Remove icon
+            const patient = row.dataset.patientName || '';
+            const phone = row.dataset.patientPhone || '';
+            const reason = row.querySelector('.reason-cell')?.textContent.trim() || '';
+            
+            tableData.push([
+                index + 1,
+                `${dateTime}\n${dateOnly}`,
+                patient,
+                phone,
+                reason
+            ]);
+        });
+        
+        // Create table
+        doc.autoTable({
+            startY: 42,
+            head: [['#', 'Time & Date', 'Patient', 'Phone', 'Reason']],
+            body: tableData,
+            theme: 'striped',
+            headStyles: {
+                fillColor: [76, 175, 80],
+                textColor: 255,
+                fontStyle: 'bold'
+            },
+            styles: {
+                fontSize: 9,
+                cellPadding: 4,
+            },
+            columnStyles: {
+                0: { cellWidth: 10, halign: 'center' },
+                1: { cellWidth: 35 },
+                2: { cellWidth: 45 },
+                3: { cellWidth: 35 },
+                4: { cellWidth: 50 }
+            },
+            didDrawPage: function(data) {
+                // Footer
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text(
+                    `Page ${doc.internal.getNumberOfPages()}`,
+                    doc.internal.pageSize.width / 2,
+                    doc.internal.pageSize.height - 10,
+                    { align: 'center' }
+                );
+            }
+        });
+        
+        // Add summary
+        const finalY = doc.lastAutoTable.finalY || 42;
+        doc.setFontSize(10);
+        doc.setTextColor(60);
+        doc.text(`Total Completed Appointments: ${tableData.length}`, 14, finalY + 10);
+        
+        // Save PDF
+        const fileName = `completed_appointments_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+        
+        console.log(`PDF downloaded: ${fileName}`);
+    }
+    </script>
 </body>
 </html> 

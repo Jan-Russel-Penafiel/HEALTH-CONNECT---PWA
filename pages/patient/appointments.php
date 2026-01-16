@@ -96,6 +96,8 @@ foreach ($appointments as $appointment) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Appointments - HealthConnect</title>
     <?php include '../../includes/header_links.php'; ?>
+    <!-- jsPDF for printing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         .page-header {
             display: flex;
@@ -471,10 +473,18 @@ foreach ($appointments as $appointment) {
                                 <td>
                                     <div class="table-actions">
                                         <?php if ($appointment['status_id'] == 2): ?>
-                                            <a href="generate_slip.php?appointment_id=<?php echo $appointment['appointment_id']; ?>" 
-                                               class="btn-print" target="_blank">
+                                            <button onclick="printAppointmentSlipPDF(<?php echo htmlspecialchars(json_encode([
+                                                'id' => $appointment['appointment_id'],
+                                                'patientName' => $patient['first_name'] . ' ' . $patient['last_name'],
+                                                'patientPhone' => $patient['mobile_number'] ?? 'N/A',
+                                                'appointmentDate' => date('l, F j, Y', strtotime($appointment['appointment_date'])),
+                                                'appointmentTime' => date('g:i A', strtotime($appointment['appointment_time'])),
+                                                'healthWorker' => $appointment['health_worker_name'],
+                                                'position' => $appointment['health_worker_position'],
+                                                'reason' => $appointment['reason'] ?: 'Not specified'
+                                            ])); ?>)" class="btn-print">
                                                 <i class="fas fa-print"></i> Print Slip
-                                            </a>
+                                            </button>
                                         <?php endif; ?>
                                         
                                         <?php if (in_array($appointment['status_id'], [1, 2])): ?>
@@ -525,10 +535,18 @@ foreach ($appointments as $appointment) {
                             
                             <div class="card-actions">
                                 <?php if ($appointment['status_id'] == 2): ?>
-                                    <a href="generate_slip.php?appointment_id=<?php echo $appointment['appointment_id']; ?>" 
-                                       class="btn-print" target="_blank">
+                                    <button onclick="printAppointmentSlipPDF(<?php echo htmlspecialchars(json_encode([
+                                        'id' => $appointment['appointment_id'],
+                                        'patientName' => $patient['first_name'] . ' ' . $patient['last_name'],
+                                        'patientPhone' => $patient['mobile_number'] ?? 'N/A',
+                                        'appointmentDate' => date('l, F j, Y', strtotime($appointment['appointment_date'])),
+                                        'appointmentTime' => date('g:i A', strtotime($appointment['appointment_time'])),
+                                        'healthWorker' => $appointment['health_worker_name'],
+                                        'position' => $appointment['health_worker_position'],
+                                        'reason' => $appointment['reason'] ?: 'Not specified'
+                                    ])); ?>)" class="btn-print">
                                         <i class="fas fa-print"></i> Print Slip
-                                    </a>
+                                    </button>
                                 <?php endif; ?>
                                 
                                 <?php if (in_array($appointment['status_id'], [1, 2])): ?>
@@ -601,11 +619,18 @@ foreach ($appointments as $appointment) {
                                 <td>
                                     <div class="table-actions">
                                         <?php if ($appointment['status_id'] == 2): ?>
-                                            <a href="generate_slip.php?appointment_id=<?php echo $appointment['appointment_id']; ?>" 
-                                               target="_blank" 
-                                               class="btn-print" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">
+                                            <button onclick="printAppointmentSlipPDF(<?php echo htmlspecialchars(json_encode([
+                                                'id' => $appointment['appointment_id'],
+                                                'patientName' => $patient['first_name'] . ' ' . $patient['last_name'],
+                                                'patientPhone' => $patient['mobile_number'] ?? 'N/A',
+                                                'appointmentDate' => date('l, F j, Y', strtotime($appointment['appointment_date'])),
+                                                'appointmentTime' => date('g:i A', strtotime($appointment['appointment_time'])),
+                                                'healthWorker' => $appointment['health_worker_name'],
+                                                'position' => $appointment['health_worker_position'],
+                                                'reason' => $appointment['reason'] ?: 'Not specified'
+                                            ])); ?>)" class="btn-print" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">
                                                 <i class="fas fa-print"></i>
-                                            </a>
+                                            </button>
                                         <?php endif; ?>
                                         
                                         <?php if (in_array($appointment['status_id'], [1, 2])): ?>
@@ -656,11 +681,18 @@ foreach ($appointments as $appointment) {
                             
                             <div class="card-actions">
                                 <?php if ($appointment['status_id'] == 2): ?>
-                                    <a href="generate_slip.php?appointment_id=<?php echo $appointment['appointment_id']; ?>" 
-                                       target="_blank" 
-                                       class="btn-print">
+                                    <button onclick="printAppointmentSlipPDF(<?php echo htmlspecialchars(json_encode([
+                                        'id' => $appointment['appointment_id'],
+                                        'patientName' => $patient['first_name'] . ' ' . $patient['last_name'],
+                                        'patientPhone' => $patient['mobile_number'] ?? 'N/A',
+                                        'appointmentDate' => date('l, F j, Y', strtotime($appointment['appointment_date'])),
+                                        'appointmentTime' => date('g:i A', strtotime($appointment['appointment_time'])),
+                                        'healthWorker' => $appointment['health_worker_name'],
+                                        'position' => $appointment['health_worker_position'],
+                                        'reason' => $appointment['reason'] ?: 'Not specified'
+                                    ])); ?>)" class="btn-print">
                                         <i class="fas fa-print"></i> Print Appointment Slip
-                                    </a>
+                                    </button>
                                 <?php endif; ?>
                                 
                                 <?php if (in_array($appointment['status_id'], [1, 2])): ?>
@@ -869,53 +901,161 @@ foreach ($appointments as $appointment) {
     <?php include '../../includes/footer.php'; ?>
     
     <script>
-    function printAppointmentSlip(appointmentData) {
-        // Get the appointment slip element
-        const slipElement = document.getElementById('appointment-slip-' + appointmentData.id);
+    async function printAppointmentSlipPDF(appointmentData) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a5'
+        });
         
-        // Create a new window for printing
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-            <head>
-                <title>Appointment Slip</title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        line-height: 1.6;
-                        padding: 20px;
-                    }
-                    .slip-header {
-                        text-align: center;
-                        margin-bottom: 20px;
-                    }
-                    .slip-details {
-                        margin: 20px 0;
-                    }
-                    .slip-footer {
-                        margin-top: 30px;
-                        text-align: center;
-                        font-size: 0.9em;
-                        border-top: 1px solid #ccc;
-                        padding-top: 20px;
-                    }
-                </style>
-            </head>
-            <body>
-                ${slipElement.innerHTML}
-            </body>
-            </html>
-        `);
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const centerX = pageWidth / 2;
         
-        // Print the window
-        printWindow.document.close();
-        printWindow.focus();
+        // Header - Brgy. Poblacion Health Center
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Brgy. Poblacion Health Center', centerX, 20, { align: 'center' });
         
-        // Add a small delay to ensure content is loaded
-        setTimeout(() => {
-            printWindow.print();
-            printWindow.close();
-        }, 250);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Appointment Confirmation Slip', centerX, 27, { align: 'center' });
+        doc.text('Contact: (123) 456-7890', centerX, 33, { align: 'center' });
+        
+        // Line separator
+        doc.setLineWidth(0.5);
+        doc.line(15, 38, pageWidth - 15, 38);
+        
+        // Appointment Details
+        let yPos = 48;
+        const labelX = 15;
+        const valueX = 55;
+        
+        doc.setFontSize(10);
+        
+        // Appointment ID
+        doc.setFont('helvetica', 'bold');
+        doc.text('Appointment ID:', labelX, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(appointmentData.id), valueX, yPos);
+        yPos += 7;
+        
+        // Patient Name
+        doc.setFont('helvetica', 'bold');
+        doc.text('Patient Name:', labelX, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(appointmentData.patientName, valueX, yPos);
+        yPos += 7;
+        
+        // Contact Number
+        doc.setFont('helvetica', 'bold');
+        doc.text('Contact Number:', labelX, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(appointmentData.patientPhone, valueX, yPos);
+        yPos += 7;
+        
+        // Date
+        doc.setFont('helvetica', 'bold');
+        doc.text('Date:', labelX, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(appointmentData.appointmentDate, valueX, yPos);
+        yPos += 7;
+        
+        // Time
+        doc.setFont('helvetica', 'bold');
+        doc.text('Time:', labelX, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(appointmentData.appointmentTime, valueX, yPos);
+        yPos += 7;
+        
+        // Health Worker
+        doc.setFont('helvetica', 'bold');
+        doc.text('Health Worker:', labelX, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(appointmentData.healthWorker, valueX, yPos);
+        yPos += 7;
+        
+        // Position
+        doc.setFont('helvetica', 'bold');
+        doc.text('Position:', labelX, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(appointmentData.position, valueX, yPos);
+        yPos += 7;
+        
+        // Reason for Visit
+        doc.setFont('helvetica', 'bold');
+        doc.text('Reason for Visit:', labelX, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(appointmentData.reason, valueX, yPos);
+        yPos += 12;
+        
+        // Important Notes Section with background
+        const notesStartY = yPos;
+        const notesHeight = 55;
+        doc.setFillColor(248, 249, 250);
+        doc.setDrawColor(200, 200, 200);
+        doc.roundedRect(15, notesStartY, pageWidth - 30, notesHeight, 2, 2, 'FD');
+        
+        yPos += 6;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('Important Notes:', labelX + 3, yPos);
+        
+        yPos += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        
+        const notes = [
+            '• Please arrive 15 minutes before your scheduled appointment time',
+            '• Bring this slip and a valid ID',
+            '• If you need to cancel or reschedule, please do so at least 24 hours in advance',
+            '• Follow health protocols (wear mask if required)',
+            '• For any questions or concerns, contact the health center'
+        ];
+        
+        notes.forEach(note => {
+            doc.text(note, labelX + 3, yPos);
+            yPos += 5;
+        });
+        
+        // QR Code
+        const qrData = `Appointment ID: ${appointmentData.id}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+        
+        try {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.src = qrUrl;
+            
+            await new Promise((resolve) => {
+                img.onload = () => {
+                    doc.addImage(img, 'PNG', pageWidth - 55, notesStartY + 18, 25, 25);
+                    resolve();
+                };
+                img.onerror = () => resolve();
+                setTimeout(resolve, 3000);
+            });
+        } catch (error) {
+            console.log('QR code generation skipped');
+        }
+        
+        // QR Code label
+        doc.setFontSize(7);
+        doc.text('Scan for quick check-in', pageWidth - 42.5, notesStartY + 47, { align: 'center' });
+        
+        // Footer
+        yPos = notesStartY + notesHeight + 10;
+        doc.setLineWidth(0.3);
+        doc.line(15, yPos - 3, pageWidth - 15, yPos - 3);
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100);
+        doc.text('This is an automatically generated appointment slip. For verification, please contact the health center.', centerX, yPos + 3, { align: 'center', maxWidth: pageWidth - 30 });
+        
+        // Save PDF
+        const fileName = `Appointment_Slip_${appointmentData.id}.pdf`;
+        doc.save(fileName);
     }
     </script>
 </body>

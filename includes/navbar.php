@@ -2,6 +2,11 @@
 $current_page = basename($_SERVER['PHP_SELF']);
 $is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 $is_health_worker = isset($_SESSION['role']) && $_SESSION['role'] === 'health_worker';
+
+// Auto-send follow-up reminders (runs automatically on all health worker pages)
+if ($is_health_worker || $is_admin) {
+    require_once __DIR__ . '/auto_send_followup_reminders.php';
+}
 ?>
 
 <nav class="top-navbar">
@@ -56,6 +61,10 @@ $is_health_worker = isset($_SESSION['role']) && $_SESSION['role'] === 'health_wo
                     <i class="fas fa-calendar-check"></i>
                     <span>Appointments</span>
                 </a>
+                <a href="/connect/pages/health_worker/follow_up_records.php" class="nav-link <?php echo $current_page === 'follow_up_records.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-calendar-plus"></i>
+                    <span>Follow-ups</span>
+                </a>
                 <a href="/connect/pages/health_worker/immunization.php" class="nav-link <?php echo $current_page === 'immunization.php' ? 'active' : ''; ?>">
                     <i class="fas fa-syringe"></i>
                     <span>Immunization</span>
@@ -84,6 +93,11 @@ $is_health_worker = isset($_SESSION['role']) && $_SESSION['role'] === 'health_wo
             </nav>
             <?php endif; ?>
         </div>
+        
+        <!-- Today's Appointments Banner (Health Worker Only) -->
+        <?php if ($is_health_worker): 
+            include __DIR__ . '/today_appointments_health_worker.php';
+        endif; ?>
         
         <div class="user-menu">
             <button class="user-menu-toggle">

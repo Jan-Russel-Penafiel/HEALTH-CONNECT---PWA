@@ -1,0 +1,3 @@
+-- No database migration needed
+-- Follow-up messages are stored in the existing 'notes' field using JSON format
+-- This approach uses existing columns and doesn't require schema changes

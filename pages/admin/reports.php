@@ -159,52 +159,42 @@ if ($report_type) {
                 break;
 
             case 'appointment_slip':
-                // Remove the validation check and just proceed with empty data if no patient selected
-                $report_data = [];
-                $report_summary = [];
+                // Get all appointments within date range
+                $query = "SELECT 
+                            a.appointment_id,
+                            a.appointment_date,
+                            a.appointment_time,
+                            a.reason,
+                            CONCAT(p_user.last_name, ', ', p_user.first_name) as patient_name,
+                            p_user.mobile_number as patient_contact,
+                            CONCAT(hw_user.last_name, ', ', hw_user.first_name) as health_worker_name,
+                            hw_user.mobile_number as health_worker_contact,
+                            ast.status_name as status
+                         FROM appointments a 
+                         JOIN patients p ON a.patient_id = p.patient_id
+                         JOIN users p_user ON p.user_id = p_user.user_id
+                         JOIN health_workers hw ON a.health_worker_id = hw.health_worker_id
+                         JOIN users hw_user ON hw.user_id = hw_user.user_id
+                         JOIN appointment_status ast ON a.status_id = ast.status_id
+                         WHERE a.appointment_date BETWEEN :start_date AND :end_date
+                         ORDER BY a.appointment_date DESC, a.appointment_time ASC";
                 
-                if (!empty($patient_id)) {
-                    // Get patient's appointments (not just upcoming ones)
-                    $query = "SELECT 
-                                a.appointment_id,
-                                a.appointment_date,
-                                a.appointment_time,
-                                a.reason,
-                                CONCAT(p_user.last_name, ', ', p_user.first_name) as patient_name,
-                                p_user.mobile_number as patient_contact,
-                                CONCAT(hw_user.last_name, ', ', hw_user.first_name) as health_worker_name,
-                                hw_user.mobile_number as health_worker_contact,
-                                ast.status_name as status
-                             FROM appointments a 
-                             JOIN patients p ON a.patient_id = p.patient_id
-                             JOIN users p_user ON p.user_id = p_user.user_id
-                             JOIN health_workers hw ON a.health_worker_id = hw.health_worker_id
-                             JOIN users hw_user ON hw.user_id = hw_user.user_id
-                             JOIN appointment_status ast ON a.status_id = ast.status_id
-                             WHERE a.patient_id = :patient_id
-                             ORDER BY a.appointment_date DESC, a.appointment_time ASC
-                             LIMIT 1";
-                    
-                    $stmt = $conn->prepare($query);
-                    $stmt->execute([':patient_id' => $patient_id]);
-                    $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $stmt = $conn->prepare($query);
+                $stmt->execute([':start_date' => $start_date, ':end_date' => $end_date]);
+                $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                    // Get patient info but don't display as cards
-                    $summary_query = "SELECT 
-                                    CONCAT(u.last_name, ', ', u.first_name) as patient_name,
-                                    u.gender,
-                                    u.date_of_birth,
-                                    u.mobile_number,
-                                    p.blood_type,
-                                    p.emergency_contact_name,
-                                    p.emergency_contact_number
-                                    FROM patients p
-                                    JOIN users u ON p.user_id = u.user_id
-                                    WHERE p.patient_id = :patient_id";
-                    $stmt = $conn->prepare($summary_query);
-                    $stmt->execute([':patient_id' => $patient_id]);
-                    $report_summary = $stmt->fetch(PDO::FETCH_ASSOC);
-                }
+                // Get summary
+                $summary_query = "SELECT 
+                                COUNT(*) as total_appointments,
+                                SUM(CASE WHEN ast.status_name = 'Completed' THEN 1 ELSE 0 END) as completed,
+                                SUM(CASE WHEN ast.status_name = 'Cancelled' THEN 1 ELSE 0 END) as cancelled,
+                                SUM(CASE WHEN ast.status_name IN ('Scheduled', 'Confirmed') THEN 1 ELSE 0 END) as pending
+                                FROM appointments a
+                                JOIN appointment_status ast ON a.status_id = ast.status_id
+                                WHERE a.appointment_date BETWEEN :start_date AND :end_date";
+                $stmt = $conn->prepare($summary_query);
+                $stmt->execute([':start_date' => $start_date, ':end_date' => $end_date]);
+                $report_summary = $stmt->fetch(PDO::FETCH_ASSOC);
                 break;
         }
     } catch (Exception $e) {
@@ -224,6 +214,9 @@ if ($report_type) {
     <!-- Add Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <!-- Add jsPDF and html2canvas for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         .filter-grid {
             display: grid;
@@ -613,20 +606,22 @@ if ($report_type) {
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <?php if ($report_type === 'appointment_slip' && empty($patient_id)): ?>
-                    <div class="text-danger mt-2">
-                        <small><i class="fas fa-exclamation-circle"></i> Please select a patient to generate an appointment slip.</small>
-                    </div>
-                    <?php endif; ?>
                 </div>
 
                 <div class="form-group" style="align-self: flex-end;">
                     <button type="submit" class="btn btn-primary">Generate Report</button>
                     <?php if (!empty($report_data)): ?>
-                        <button type="button" class="btn btn-secondary" onclick="exportToCSV()">Export to CSV</button>
-                        <?php if (in_array($report_type, ['medical_records', 'appointment_slip'])): ?>
+                        <?php if ($report_type !== 'appointment_slip'): ?>
+                            <button type="button" class="btn btn-secondary" onclick="exportToCSV()">Export to CSV</button>
+                        <?php endif; ?>
+                        <?php if ($report_type === 'medical_records'): ?>
                             <button type="button" class="btn btn-secondary" onclick="window.print()">
                                 <i class="fas fa-print"></i> Print
+                            </button>
+                        <?php endif; ?>
+                        <?php if ($report_type === 'appointment_slip'): ?>
+                            <button type="button" class="btn btn-secondary" onclick="printAllSlips()" id="printAllBtn">
+                                <i class="fas fa-print"></i> Print All
                             </button>
                         <?php endif; ?>
                     <?php endif; ?>
@@ -638,23 +633,17 @@ if ($report_type) {
             <div class="empty-state">
                 <i class="fas fa-file-alt"></i>
                 <h3>No Data Available</h3>
-                <?php if ($report_type === 'appointment_slip' && !empty($patient_id)): ?>
-                    <p>No appointments found for this patient. Please schedule an appointment first.</p>
-                <?php else: ?>
-                    <p>No records found for the selected criteria.</p>
-                <?php endif; ?>
+                <p>No records found for the selected criteria.</p>
             </div>
         <?php endif; ?>
 
         <?php if (!empty($report_data)): ?>
-            <?php if ($report_type !== 'appointment_slip'): ?>
             <div class="search-container">
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" id="searchInput" class="search-input" placeholder="Search in results..." onkeyup="filterResults()">
             </div>
-            <?php endif; ?>
 
-            <?php if (!empty($report_summary) && $report_type !== 'appointment_slip'): ?>
+            <?php if (!empty($report_summary)): ?>
                 <div class="stats-grid">
                     <?php foreach ($report_summary as $key => $value): ?>
                         <div class="stat-card">
@@ -1244,6 +1233,7 @@ if ($report_type) {
                     }
                 </style>
             <?php elseif ($report_type === 'appointment_slip'): ?>
+                <div class="appointment-slips-grid">
                 <?php foreach ($report_data as $appointment): ?>
                     <div class="appointment-slip">
                         <div class="header">
@@ -1259,11 +1249,11 @@ if ($report_type) {
                             </div>
                             <div class="detail-row">
                                 <span class="label">Patient Name:</span>
-                                <span class="value"><?php echo htmlspecialchars($report_summary['patient_name']); ?></span>
+                                <span class="value"><?php echo htmlspecialchars($appointment['patient_name']); ?></span>
                             </div>
                             <div class="detail-row">
                                 <span class="label">Contact Number:</span>
-                                <span class="value"><?php echo htmlspecialchars($report_summary['mobile_number']); ?></span>
+                                <span class="value"><?php echo htmlspecialchars($appointment['patient_contact']); ?></span>
                             </div>
                             <div class="detail-row">
                                 <span class="label">Date:</span>
@@ -1301,7 +1291,7 @@ if ($report_type) {
                                 // Generate QR code data
                                 $qr_data = json_encode([
                                     'appointment_id' => $appointment['appointment_id'],
-                                    'patient' => $report_summary['patient_name'],
+                                    'patient' => $appointment['patient_name'],
                                     'date' => $appointment['appointment_date'],
                                     'time' => $appointment['appointment_time']
                                 ]);
@@ -1314,31 +1304,32 @@ if ($report_type) {
                         <div class="footer">
                             <p>This is an automatically generated appointment slip. For verification, please contact the health center.</p>
                         </div>
-
-                        <div class="text-end mt-4 no-print">
-                            <button type="button" class="btn btn-primary" onclick="window.print()">
-                                <i class="fas fa-print me-2"></i> Print Slip
-                            </button>
-                        </div>
                     </div>
                 <?php endforeach; ?>
+                </div>
 
                 <style>
+                    .appointment-slips-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+                        gap: 20px;
+                        margin-top: 20px;
+                    }
+
                     .appointment-slip {
                         font-family: Arial, sans-serif;
                         line-height: 1.4;
                         color: #333;
-                        margin: 0 auto;
-                        padding: 30px;
-                        max-width: 800px;
+                        padding: 20px;
                         background: white;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                         border-radius: 10px;
+                        border: 1px solid #e0e0e0;
                     }
 
                     .appointment-slip .header {
                         text-align: center;
-                        margin-bottom: 20px;
+                        margin-bottom: 15px;
                         border-bottom: 1px solid #333;
                         padding-bottom: 10px;
                     }
@@ -1346,41 +1337,43 @@ if ($report_type) {
                     .appointment-slip .header h1 {
                         margin: 0;
                         color: #2c3e50;
-                        font-size: 24px;
+                        font-size: 16px;
                     }
 
                     .appointment-slip .header p {
-                        margin: 5px 0;
+                        margin: 3px 0;
                         color: #666;
+                        font-size: 12px;
                     }
 
                     .appointment-details {
-                        margin-bottom: 25px;
+                        margin-bottom: 15px;
                     }
 
                     .detail-row {
-                        margin-bottom: 10px;
+                        margin-bottom: 6px;
                         display: flex;
                         align-items: flex-start;
+                        font-size: 13px;
                     }
 
                     .detail-row .label {
                         font-weight: bold;
                         color: #2c3e50;
-                        width: 30%;
-                        min-width: 150px;
+                        width: 40%;
+                        min-width: 120px;
                     }
 
                     .detail-row .value {
-                        width: 70%;
+                        width: 60%;
                     }
 
                     .qr-section {
                         display: flex;
                         justify-content: space-between;
                         align-items: flex-start;
-                        margin: 25px 0;
-                        padding: 20px;
+                        margin: 15px 0;
+                        padding: 12px;
                         background-color: #f8f9fa;
                         border: 1px solid #ddd;
                         border-radius: 5px;
@@ -1388,71 +1381,48 @@ if ($report_type) {
 
                     .qr-code {
                         text-align: center;
-                        width: 30%;
+                        width: 25%;
                     }
 
                     .qr-code img {
-                        width: 100px;
-                        height: 100px;
-                        margin-bottom: 10px;
+                        width: 70px;
+                        height: 70px;
+                        margin-bottom: 5px;
                     }
 
                     .qr-code p {
-                        margin: 5px 0;
-                        font-size: 12px;
+                        margin: 3px 0;
+                        font-size: 10px;
                         color: #666;
                     }
 
                     .important-notes {
-                        width: 65%;
+                        width: 72%;
                     }
 
                     .important-notes h4 {
-                        margin: 0 0 10px 0;
+                        margin: 0 0 8px 0;
                         color: #2c3e50;
+                        font-size: 12px;
                     }
 
                     .important-notes ul {
                         margin: 0;
-                        padding-left: 20px;
+                        padding-left: 15px;
                     }
 
                     .important-notes li {
-                        margin-bottom: 5px;
-                        font-size: 14px;
+                        margin-bottom: 3px;
+                        font-size: 11px;
                     }
 
                     .footer {
-                        margin-top: 25px;
+                        margin-top: 15px;
                         text-align: center;
-                        font-size: 12px;
+                        font-size: 10px;
                         color: #666;
                         border-top: 1px solid #ddd;
-                        padding-top: 15px;
-                    }
-
-                    @media print {
-                        body * {
-                            visibility: hidden;
-                        }
-                        .appointment-slip, .appointment-slip * {
-                            visibility: visible;
-                        }
-                        .appointment-slip {
-                            position: absolute;
-                            left: 0;
-                            top: 0;
-                            width: 100%;
-                            box-shadow: none;
-                            padding: 15px;
-                        }
-                        .no-print {
-                            display: none !important;
-                        }
-                        .container {
-                            padding: 0;
-                            margin: 0;
-                        }
+                        padding-top: 10px;
                     }
                 </style>
             <?php endif; ?>
@@ -1468,7 +1438,7 @@ if ($report_type) {
         const dateFilterEnd = document.getElementById('dateFilterEnd');
         const patientFilter = document.getElementById('patientFilter');
 
-        if (reportType === 'medical_records' || reportType === 'appointment_slip') {
+        if (reportType === 'medical_records') {
             dateFilter.style.display = 'none';
             dateFilterEnd.style.display = 'none';
             patientFilter.style.display = 'block';
@@ -1510,11 +1480,11 @@ if ($report_type) {
         // Initialize filter visibility
         toggleFilters();
         
-        // Add change event to patient select for appointment slip
+        // Add change event to patient select for medical records
         $('#patient_id').on('change', function() {
-            if ($('#type').val() === 'appointment_slip') {
+            if ($('#type').val() === 'medical_records') {
                 if (this.value) {
-                    $('form').submit(); // Auto-submit when patient is selected for appointment slip
+                    $('form').submit(); // Auto-submit when patient is selected for medical records
                 }
             }
         });
@@ -1675,6 +1645,83 @@ if ($report_type) {
             });
         }
     });
+
+    // Print all appointment slips using jsPDF
+    async function printAllSlips() {
+        const { jsPDF } = window.jspdf;
+        const slips = document.querySelectorAll('.appointment-slip');
+        
+        if (slips.length === 0) {
+            alert('No appointment slips to print.');
+            return;
+        }
+
+        // Show loading state
+        const printBtn = document.getElementById('printAllBtn');
+        const originalText = printBtn.innerHTML;
+        printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+        printBtn.disabled = true;
+
+        try {
+            // Create PDF - A4 size
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 10;
+            const slipWidth = (pageWidth - (margin * 3)) / 2; // 2 columns
+            const slipHeight = (pageHeight - (margin * 3)) / 2; // 2 rows per page
+            
+            let currentX = margin;
+            let currentY = margin;
+            let slipCount = 0;
+
+            for (let i = 0; i < slips.length; i++) {
+                const slip = slips[i];
+                
+                // Capture each slip as canvas
+                const canvas = await html2canvas(slip, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff'
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Calculate position (2x2 grid)
+                const col = slipCount % 2;
+                const row = Math.floor(slipCount % 4 / 2);
+                
+                currentX = margin + (col * (slipWidth + margin));
+                currentY = margin + (row * (slipHeight + margin));
+
+                // Add image to PDF
+                pdf.addImage(imgData, 'PNG', currentX, currentY, slipWidth, slipHeight);
+                
+                slipCount++;
+                
+                // Add new page after every 4 slips (2x2)
+                if (slipCount % 4 === 0 && i < slips.length - 1) {
+                    pdf.addPage();
+                }
+            }
+
+            // Generate filename with date
+            const date = new Date().toISOString().slice(0, 10);
+            const filename = `appointment_slips_${date}.pdf`;
+            
+            // Save the PDF
+            pdf.save(filename);
+
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        } finally {
+            // Restore button state
+            printBtn.innerHTML = originalText;
+            printBtn.disabled = false;
+        }
+    }
     </script>
 </body>
 </html> 

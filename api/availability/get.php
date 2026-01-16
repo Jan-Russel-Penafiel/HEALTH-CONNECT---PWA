@@ -55,6 +55,7 @@ try {
     $availabilityData = [
         'unavailableDates' => [],
         'slotLimits' => new stdClass(),
+        'timeSlotLimits' => new stdClass(),
         'defaultSlotLimit' => 10
     ];
     
@@ -72,6 +73,15 @@ try {
                 $availabilityData['slotLimits'] = (object)$slotLimits;
             } else {
                 $availabilityData['slotLimits'] = new stdClass();
+            }
+            // Handle timeSlotLimits
+            $timeSlotLimits = $savedData['timeSlotLimits'] ?? [];
+            if (is_array($timeSlotLimits) && !empty($timeSlotLimits)) {
+                $availabilityData['timeSlotLimits'] = (object)array_map(function($slots) {
+                    return (object)$slots;
+                }, $timeSlotLimits);
+            } else {
+                $availabilityData['timeSlotLimits'] = new stdClass();
             }
             $availabilityData['defaultSlotLimit'] = $savedData['defaultSlotLimit'] ?? 10;
         }
@@ -102,6 +112,7 @@ try {
         'data' => [
             'unavailableDates' => $availabilityData['unavailableDates'],
             'slotLimits' => $availabilityData['slotLimits'],
+            'timeSlotLimits' => $availabilityData['timeSlotLimits'],
             'bookedSlots' => !empty($bookedData) ? (object)$bookedData : new stdClass(),
             'defaultSlotLimit' => $availabilityData['defaultSlotLimit'],
             'healthWorkerId' => $health_worker_id

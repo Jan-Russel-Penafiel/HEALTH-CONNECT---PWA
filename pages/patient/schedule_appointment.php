@@ -492,6 +492,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             overflow-y: auto;
         }
         
+        /* Disabled time slot options */
+        #appointment_time option:disabled {
+            color: #999 !important;
+            background-color: #f5f5f5;
+            font-style: italic;
+        }
+        
         /* Toast */
         .toast-notification {
             position: fixed;
@@ -687,8 +694,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     availabilityData = {
                         unavailableDates: result.data.unavailableDates || [],
                         slotLimits: result.data.slotLimits || {},
+                        timeSlotLimits: result.data.timeSlotLimits || {},
                         bookedSlots: result.data.bookedSlots || {},
                         bookedTimes: result.data.bookedTimes || {},
+                        bookedCountsByTime: result.data.bookedCountsByTime || {},
                         defaultSlotLimit: result.data.defaultSlotLimit || 10,
                         timeSlots: result.data.timeSlots || phpTimeSlots,
                         workingHours: result.data.workingHours || { start: '08:00', end: '17:00', interval: 30 }
@@ -726,8 +735,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Get slot limit
             const slotLimit = availabilityData.slotLimits[dateStr] || availabilityData.defaultSlotLimit;
-            const booked = availabilityData.bookedSlots[dateStr] || 0;
-            const remaining = Math.max(0, slotLimit - booked);
+            const bookedCountsByTime = availabilityData.bookedCountsByTime ? (availabilityData.bookedCountsByTime[dateStr] || {}) : {};
+            const timeSlotLimits = availabilityData.timeSlotLimits ? (availabilityData.timeSlotLimits[dateStr] || {}) : {};
+            
+            // Check if this date has specific time slot limits configured
+            const hasTimeSlotConfig = Object.keys(timeSlotLimits).length > 0;
+            
+            let remaining;
+            if (hasTimeSlotConfig) {
+                // Calculate remaining based on individual time slots
+                remaining = 0;
+                Object.keys(timeSlotLimits).forEach(time => {
+                    const limit = timeSlotLimits[time] || 0;
+                    const bookedCount = bookedCountsByTime[time] || 0;
+                    remaining += Math.max(0, limit - bookedCount);
+                });
+            } else {
+                // Legacy: use total slot count
+                const booked = availabilityData.bookedSlots[dateStr] || 0;
+                remaining = Math.max(0, slotLimit - booked);
+            }
             
             if (remaining === 0) {
                 return { status: 'full', slots: slotLimit, remaining: 0 };
@@ -877,21 +904,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Get booked times for this date
             const bookedTimes = availabilityData.bookedTimes ? (availabilityData.bookedTimes[dateStr] || []) : [];
+            const bookedCountsByTime = availabilityData.bookedCountsByTime ? (availabilityData.bookedCountsByTime[dateStr] || {}) : {};
+            const timeSlotLimits = availabilityData.timeSlotLimits ? (availabilityData.timeSlotLimits[dateStr] || {}) : {};
+            
+            // Check if this date has specific time slot limits configured
+            const hasTimeSlotConfig = Object.keys(timeSlotLimits).length > 0;
             
             availabilityData.timeSlots.forEach(slot => {
                 // Handle both object and string formats
                 const value = typeof slot === 'object' ? slot.value : slot;
                 const label = typeof slot === 'object' ? slot.label : formatTimeLabel(slot);
                 
-                // Skip if time is already booked
-                if (bookedTimes.includes(value)) {
-                    return;
+                if (hasTimeSlotConfig) {
+                    // Get slot limit for this time
+                    const slotLimit = timeSlotLimits[value] || 0;
+                    
+                    // Calculate remaining slots for this specific time
+                    const bookedCount = bookedCountsByTime[value] || 0;
+                    const remainingSlots = Math.max(0, slotLimit - bookedCount);
+                    
+                    const option = document.createElement('option');
+                    option.value = value;
+                    
+                    if (slotLimit === 0) {
+                        // No slots configured - show as unavailable
+                        option.textContent = `${label} - Not Available`;
+                        option.disabled = true;
+                        option.style.color = '#999';
+                    } else if (remainingSlots === 0) {
+                        // Fully booked - show as full
+                        option.textContent = `${label} - FULL`;
+                        option.disabled = true;
+                        option.style.color = '#999';
+                    } else {
+                        // Available slots
+                        option.textContent = `${label} (${remainingSlots} slot${remainingSlots !== 1 ? 's' : ''} available)`;
+                    }
+                    timeSelect.appendChild(option);
+                } else {
+                    // Legacy mode: show all times
+                    const option = document.createElement('option');
+                    option.value = value;
+                    
+                    if (bookedTimes.includes(value)) {
+                        option.textContent = `${label} - FULL`;
+                        option.disabled = true;
+                        option.style.color = '#999';
+                    } else {
+                        option.textContent = label;
+                    }
+                    timeSelect.appendChild(option);
                 }
-                
-                const option = document.createElement('option');
-                option.value = value;
-                option.textContent = label;
-                timeSelect.appendChild(option);
             });
             
             // Enable submit button

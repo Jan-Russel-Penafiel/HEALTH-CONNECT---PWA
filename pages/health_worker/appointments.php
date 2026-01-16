@@ -39,8 +39,9 @@ $params = [$health_worker_id];
 try {
     // Get appointments
     $query = "SELECT a.appointment_id as id, a.appointment_date, a.appointment_time, a.notes, a.status_id, a.reason,
-                     u.first_name, u.last_name, u.email, u.mobile_number as patient_phone,
-                     s.status_name as status
+                     a.patient_id, u.first_name, u.last_name, u.email, u.mobile_number as patient_phone,
+                     s.status_name as status,
+                     (SELECT mr.follow_up_date FROM medical_records mr WHERE mr.patient_id = a.patient_id ORDER BY mr.created_at DESC LIMIT 1) as last_follow_up_date
               FROM appointments a 
               JOIN patients p ON a.patient_id = p.patient_id
               JOIN users u ON p.user_id = u.user_id
@@ -55,6 +56,68 @@ try {
 } catch (PDOException $e) {
     error_log("Error fetching appointments: " . $e->getMessage());
     $appointments = [];
+}
+
+// Get patients with upcoming follow-up checkups (within 2 days)
+$upcoming_followups = [];
+try {
+    $followup_query = "SELECT mr.record_id, mr.follow_up_date, mr.notes, mr.patient_id,
+                              u.first_name, u.last_name, u.mobile_number,
+                              DATEDIFF(mr.follow_up_date, CURDATE()) as days_until_followup
+                       FROM medical_records mr
+                       JOIN patients p ON mr.patient_id = p.patient_id
+                       JOIN users u ON p.user_id = u.user_id
+                       WHERE mr.health_worker_id = ?
+                       AND mr.follow_up_date IS NOT NULL
+                       AND mr.follow_up_date >= CURDATE()
+                       AND DATEDIFF(mr.follow_up_date, CURDATE()) <= 2
+                       ORDER BY mr.follow_up_date ASC";
+    
+    $stmt = $pdo->prepare($followup_query);
+    $stmt->execute([$health_worker_id]);
+    $upcoming_followups = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Parse JSON from notes field for each record
+    foreach ($upcoming_followups as &$followup) {
+        if (!empty($followup['notes'])) {
+            $notes_data = json_decode($followup['notes'], true);
+            if (is_array($notes_data) && isset($notes_data['follow_up_message'])) {
+                $followup['follow_up_message'] = $notes_data['follow_up_message'];
+            } else {
+                $followup['follow_up_message'] = '';
+            }
+        } else {
+            $followup['follow_up_message'] = '';
+        }
+    }
+} catch (PDOException $e) {
+    error_log("Error fetching upcoming follow-ups: " . $e->getMessage());
+    $upcoming_followups = [];
+}
+
+// Get today's appointments for banner (sorted by time ascending)
+$today_appointments = [];
+$today_count = 0;
+try {
+    $today_query = "SELECT a.appointment_id as id, a.appointment_date, a.appointment_time, a.reason,
+                           u.first_name, u.last_name, s.status_name as status
+                    FROM appointments a 
+                    JOIN patients p ON a.patient_id = p.patient_id
+                    JOIN users u ON p.user_id = u.user_id
+                    JOIN appointment_status s ON a.status_id = s.status_id
+                    WHERE a.health_worker_id = ? 
+                    AND DATE(a.appointment_date) = CURDATE()
+                    AND a.status_id != 3
+                    ORDER BY a.appointment_time ASC";
+    
+    $stmt = $pdo->prepare($today_query);
+    $stmt->execute([$health_worker_id]);
+    $today_appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $today_count = count($today_appointments);
+} catch (PDOException $e) {
+    error_log("Error fetching today's appointments: " . $e->getMessage());
+    $today_appointments = [];
+    $today_count = 0;
 }
 
 // Get appointment slots
@@ -108,6 +171,9 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     <!-- Add jsQR library for QR code scanning -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <!-- jsPDF for printing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         /* Desktop Table Layout */
         @media (min-width: 992px) {
@@ -1191,6 +1257,174 @@ try {
             color: #2e7d32;
         }
         
+        /* Time Slots Distribution Styles */
+        .time-slots-distribution {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .time-slots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        
+        .time-slot-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            transition: all 0.2s;
+        }
+        
+        .time-slot-item:hover {
+            border-color: #4CAF50;
+        }
+        
+        .time-slot-item.has-slots {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+        }
+        
+        .time-slot-label {
+            flex: 1;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .time-slot-input {
+            width: 50px;
+            padding: 4px 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+        
+        .time-slot-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .slot-distribution-summary {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            margin-top: 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .allocated-count strong {
+            color: #4CAF50;
+        }
+        
+        .allocated-count.over-limit strong {
+            color: #f44336;
+        }
+        
+        .remaining-count strong {
+            color: #666;
+        }
+        
+        /* Filter Toolbar Styles */
+        .filter-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .filter-group label {
+            font-weight: 500;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .filter-select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background: white;
+            cursor: pointer;
+            min-width: 150px;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        }
+        
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-print {
+            padding: 10px 20px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+        
+        .btn-print:hover {
+            background: #1976D2;
+        }
+        
+        .appointment-row-hidden {
+            display: none !important;
+        }
+        
+        @media (max-width: 768px) {
+            .filter-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-select {
+                width: 100%;
+            }
+        }
+        
         /* Tab Navigation for switching views */
         .view-tabs {
             display: flex;
@@ -1298,6 +1532,8 @@ try {
                 width: 100%;
             }
         }
+        
+
     </style>
 </head>
 <body>
@@ -1356,6 +1592,37 @@ try {
 
         <!-- Appointments View -->
         <div id="appointmentsView" class="view-content active">
+            <!-- Filter Section -->
+            <div class="filter-toolbar">
+                <div class="filter-group">
+                    <label for="searchPatient"><i class="fas fa-search"></i> Search:</label>
+                    <input type="text" id="searchPatient" class="filter-select" placeholder="Search by patient name..." oninput="filterAppointments()" style="min-width: 200px;">
+                </div>
+                <div class="filter-group">
+                    <label for="dateFilter"><i class="fas fa-calendar"></i> Filter by Date:</label>
+                    <input type="date" id="dateFilter" class="filter-select" onchange="filterAppointments()">
+                </div>
+                <div class="filter-group">
+                    <label for="timeFilter"><i class="fas fa-clock"></i> Filter by Time:</label>
+                    <select id="timeFilter" class="filter-select" onchange="filterAppointments()">
+                        <option value="all">All Times</option>
+                        <?php
+                        $start = strtotime($working_hours['start']);
+                        $end = strtotime($working_hours['end']);
+                        $interval = $working_hours['interval'] * 60;
+                        for ($time = $start; $time < $end; $time += $interval) {
+                            echo '<option value="' . date('H:i', $time) . '">' . date('g:i A', $time) . '</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-print" onclick="printFilteredAppointments()">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
+            </div>
+            
             <!-- Desktop Table Layout -->
             <div class="appointments-table-container">
             <?php if (empty($appointments)): ?>
@@ -1365,7 +1632,7 @@ try {
                 <p>There are no appointments matching your search criteria.</p>
             </div>
             <?php else: ?>
-            <table class="appointments-table">
+            <table class="appointments-table" id="appointmentsTable">
                 <thead>
                     <tr>
                         <th>Date & Time</th>
@@ -1377,8 +1644,11 @@ try {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($appointments as $appointment): ?>
-                    <tr class="<?php echo strtolower($appointment['status']); ?>" data-appointment-id="<?php echo $appointment['id']; ?>">
+                    <?php foreach ($appointments as $appointment): 
+                        $timeValue = date('H:i', strtotime($appointment['appointment_time']));
+                        $dateValue = date('Y-m-d', strtotime($appointment['appointment_date']));
+                    ?>
+                    <tr class="<?php echo strtolower($appointment['status']); ?>" data-appointment-id="<?php echo $appointment['id']; ?>" data-appointment-time="<?php echo $timeValue; ?>" data-date="<?php echo $dateValue; ?>">
                         <td>
                             <div class="table-datetime">
                                 <?php echo date('g:i A', strtotime($appointment['appointment_time'])); ?>
@@ -1422,9 +1692,7 @@ try {
                                 <button class="btn btn-warning" onclick="sendSMSReminder(<?php echo $appointment['id']; ?>)" title="Send SMS Reminder">
                                     <i class="fas fa-bell"></i> Remind
                                 </button>
-                                <?php endif; ?>
-                                <?php if ($appointment['status'] === 'Scheduled' || $appointment['status'] === 'Confirmed'): ?>
-                                <button class="btn btn-success" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Done')" title="Mark as Done">
+                                <button class="btn btn-success" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Done', <?php echo $appointment['patient_id']; ?>)" title="Mark as Done">
                                     <i class="fas fa-check"></i> Done
                                 </button>
                                 <?php endif; ?>
@@ -1446,8 +1714,11 @@ try {
                 <p>There are no appointments matching your search criteria.</p>
             </div>
             <?php else: ?>
-                <?php foreach ($appointments as $appointment): ?>
-                <div class="appointment-card <?php echo strtolower($appointment['status']); ?>" data-appointment-id="<?php echo $appointment['id']; ?>">
+                <?php foreach ($appointments as $appointment): 
+                    $cardTimeValue = date('H:i', strtotime($appointment['appointment_time']));
+                    $cardDateValue = date('Y-m-d', strtotime($appointment['appointment_date']));
+                ?>
+                <div class="appointment-card <?php echo strtolower($appointment['status']); ?>" data-appointment-id="<?php echo $appointment['id']; ?>" data-date="<?php echo $cardDateValue; ?>" data-time="<?php echo $cardTimeValue; ?>">
                     <div class="appointment-date">
                         <i class="fas fa-calendar"></i>
                         <span><?php echo date('F d, Y', strtotime($appointment['appointment_date'])); ?></span>
@@ -1490,9 +1761,7 @@ try {
                         <button class="btn btn-warning" onclick="sendSMSReminder(<?php echo $appointment['id']; ?>)" title="Send SMS Reminder">
                             <i class="fas fa-bell"></i> Remind
                         </button>
-                        <?php endif; ?>
-                        <?php if ($appointment['status'] === 'Scheduled' || $appointment['status'] === 'Confirmed'): ?>
-                        <button class="btn btn-success" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Done')" title="Mark as Done">
+                        <button class="btn btn-success" onclick="updateStatus(<?php echo $appointment['id']; ?>, 'Done', <?php echo $appointment['patient_id']; ?>)" title="Mark as Done">
                             <i class="fas fa-check"></i> Done
                         </button>
                         <?php endif; ?>
@@ -1655,6 +1924,22 @@ try {
                         <button type="button" class="slot-preset-btn" onclick="setSlotPreset(20)">20</button>
                         <button type="button" class="slot-preset-btn" onclick="setSlotPreset(25)">25</button>
                     </div>
+                    
+                    <div class="time-slots-distribution" id="timeSlotsDistribution">
+                        <label style="margin-top: 15px; margin-bottom: 10px;">
+                            <i class="fas fa-clock"></i> Preferred Time Slots Distribution
+                        </label>
+                        <p style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">
+                            Allocate slots for each available time. Only times with slots > 0 will be shown to patients.
+                        </p>
+                        <div class="time-slots-grid" id="timeSlotsGrid">
+                            <!-- Time slots will be populated by JavaScript -->
+                        </div>
+                        <div class="slot-distribution-summary" id="slotDistributionSummary">
+                            <span class="allocated-count">Allocated: <strong>0</strong></span>
+                            <span class="remaining-count">/ Total: <strong>10</strong></span>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="availability-modal-footer">
@@ -1765,6 +2050,162 @@ try {
 
     <script>
     // =====================================================
+    // FILTER AND PRINT FUNCTIONS
+    // =====================================================
+    
+    function filterAppointments() {
+        const searchTerm = document.getElementById('searchPatient').value.toLowerCase();
+        const dateFilter = document.getElementById('dateFilter').value;
+        const timeFilter = document.getElementById('timeFilter').value;
+        const rows = document.querySelectorAll('#appointmentsTable tbody tr');
+        const cards = document.querySelectorAll('.appointment-card');
+        
+        // Filter table rows (desktop view)
+        rows.forEach(row => {
+            const patientName = row.querySelector('.table-patient-name')?.textContent.toLowerCase() || '';
+            const appointmentDate = row.getAttribute('data-date') || '';
+            const appointmentTime = row.dataset.appointmentTime || '';
+            
+            let matchesSearch = patientName.includes(searchTerm);
+            let matchesDate = !dateFilter || appointmentDate === dateFilter;
+            let matchesTime = timeFilter === 'all' || appointmentTime === timeFilter;
+            
+            if (matchesSearch && matchesDate && matchesTime) {
+                row.classList.remove('appointment-row-hidden');
+            } else {
+                row.classList.add('appointment-row-hidden');
+            }
+        });
+        
+        // Filter mobile cards
+        cards.forEach(card => {
+            const patientName = card.querySelector('.patient-info h3')?.textContent.toLowerCase() || '';
+            const appointmentDate = card.getAttribute('data-date') || '';
+            const appointmentTime = card.getAttribute('data-time') || '';
+            
+            let matchesSearch = patientName.includes(searchTerm);
+            let matchesDate = !dateFilter || appointmentDate === dateFilter;
+            let matchesTime = timeFilter === 'all' || appointmentTime === timeFilter;
+            
+            if (matchesSearch && matchesDate && matchesTime) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        // Update count display
+        const visibleRows = document.querySelectorAll('#appointmentsTable tbody tr:not(.appointment-row-hidden)');
+        console.log(`Showing ${visibleRows.length} appointments`);
+    }
+    
+    function filterAppointmentsByTime() {
+        // Legacy function - redirect to new unified filter
+        filterAppointments();
+    }
+    
+    function printFilteredAppointments() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Get all filter values for title
+        const searchTerm = document.getElementById('searchPatient').value;
+        const dateFilter = document.getElementById('dateFilter').value;
+        const timeSelect = document.getElementById('timeFilter');
+        const timeFilter = timeSelect.value;
+        const timeText = timeFilter === 'all' ? 'All Times' : timeSelect.options[timeSelect.selectedIndex].text;
+        
+        // Build filter description
+        let filterParts = [];
+        if (searchTerm) filterParts.push(`Search: "${searchTerm}"`);
+        if (dateFilter) filterParts.push(`Date: ${dateFilter}`);
+        if (timeFilter !== 'all') filterParts.push(`Time: ${timeText}`);
+        const filterText = filterParts.length > 0 ? filterParts.join(', ') : 'No filters applied';
+        
+        // Title
+        doc.setFontSize(18);
+        doc.setTextColor(76, 175, 80);
+        doc.text('HealthConnect - Appointments Report', 14, 20);
+        
+        // Subtitle with filter info
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Filters: ${filterText}`, 14, 28);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 34);
+        
+        // Collect visible appointment data
+        const rows = document.querySelectorAll('#appointmentsTable tbody tr:not(.appointment-row-hidden)');
+        const tableData = [];
+        
+        rows.forEach((row, index) => {
+            const dateTime = row.querySelector('.table-datetime')?.textContent.trim() || '';
+            const date = row.querySelector('.table-date')?.textContent.trim() || '';
+            const patient = row.querySelector('.table-patient-name')?.textContent.trim() || '';
+            const contactInfo = row.querySelector('.table-contact-info');
+            const phone = contactInfo ? contactInfo.querySelectorAll('div')[1]?.textContent.trim().replace(/^\s*/, '') : '';
+            const reason = row.querySelector('.table-reason')?.textContent.trim() || '';
+            const status = row.querySelector('.table-status-badge')?.textContent.trim() || '';
+            
+            tableData.push([
+                index + 1, // Add numbering
+                `${dateTime}\n${date}`,
+                patient,
+                phone,
+                reason,
+                status
+            ]);
+        });
+        
+        // Create table
+        doc.autoTable({
+            startY: 42,
+            head: [['#', 'Time & Date', 'Patient', 'Phone', 'Reason', 'Status']],
+            body: tableData,
+            theme: 'striped',
+            headStyles: {
+                fillColor: [76, 175, 80],
+                textColor: 255,
+                fontStyle: 'bold'
+            },
+            styles: {
+                fontSize: 9,
+                cellPadding: 4,
+            },
+            columnStyles: {
+                0: { cellWidth: 10, halign: 'center' }, // Numbering column
+                1: { cellWidth: 32 },
+                2: { cellWidth: 38 },
+                3: { cellWidth: 32 },
+                4: { cellWidth: 42 },
+                5: { cellWidth: 22 }
+            },
+            didDrawPage: function(data) {
+                // Footer
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text(
+                    `Page ${doc.internal.getNumberOfPages()}`,
+                    doc.internal.pageSize.width / 2,
+                    doc.internal.pageSize.height - 10,
+                    { align: 'center' }
+                );
+            }
+        });
+        
+        // Add summary
+        const finalY = doc.lastAutoTable.finalY || 42;
+        doc.setFontSize(10);
+        doc.setTextColor(60);
+        doc.text(`Total Appointments: ${tableData.length}`, 14, finalY + 10);
+        
+        // Save PDF
+        const fileName = `appointments_${filterValue === 'all' ? 'all' : filterValue.replace(':', '')}_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+        
+        showToast(`PDF downloaded: ${fileName}`, 'success');
+    }
+    
+    // =====================================================
     // VIEW SWITCHING
     // =====================================================
     function switchView(view) {
@@ -1799,11 +2240,26 @@ try {
     let availabilityData = {
         unavailableDates: [],
         slotLimits: {},
+        timeSlotLimits: {},
         bookedSlots: {},
         defaultSlotLimit: 10
     };
     let selectedAvailabilityDate = null;
     let currentAvailabilityType = 'available';
+    
+    // Time slots from PHP
+    const workingTimeSlots = [
+        <?php
+        $start = strtotime($working_hours['start']);
+        $end = strtotime($working_hours['end']);
+        $interval = $working_hours['interval'] * 60;
+        $slots = [];
+        for ($time = $start; $time < $end; $time += $interval) {
+            $slots[] = '{ value: "' . date('H:i', $time) . '", label: "' . date('g:i A', $time) . '" }';
+        }
+        echo implode(",\n        ", $slots);
+        ?>
+    ];
 
     async function loadAvailabilityData() {
         try {
@@ -1815,6 +2271,7 @@ try {
                 availabilityData = {
                     unavailableDates: result.data.unavailableDates || [],
                     slotLimits: result.data.slotLimits || {},
+                    timeSlotLimits: result.data.timeSlotLimits || {},
                     bookedSlots: result.data.bookedSlots || {},
                     defaultSlotLimit: result.data.defaultSlotLimit || 10
                 };
@@ -1989,6 +2446,7 @@ try {
     }
 
     function openAvailabilityModal(dateStr) {
+        selectedAvailabilityDate = dateStr;
         const status = getDateStatus(dateStr);
         
         document.getElementById('modalDateDisplay').textContent = formatDateDisplay(dateStr);
@@ -1999,8 +2457,74 @@ try {
             setAvailabilityOption('unavailable');
         } else {
             setAvailabilityOption('available');
-            document.getElementById('slotLimitInput').value = 
-                availabilityData.slotLimits[dateStr] || availabilityData.defaultSlotLimit;
+            const slotLimit = availabilityData.slotLimits[dateStr] || availabilityData.defaultSlotLimit;
+            document.getElementById('slotLimitInput').value = slotLimit;
+            
+            // Populate time slots distribution
+            populateTimeSlotsGrid(dateStr, slotLimit);
+        }
+    }
+    
+    function populateTimeSlotsGrid(dateStr, totalSlots) {
+        const grid = document.getElementById('timeSlotsGrid');
+        grid.innerHTML = '';
+        
+        // Get existing time slot limits for this date
+        const existingTimeSlots = availabilityData.timeSlotLimits[dateStr] || {};
+        
+        workingTimeSlots.forEach(slot => {
+            const existingLimit = existingTimeSlots[slot.value] || 0;
+            
+            const item = document.createElement('div');
+            item.className = 'time-slot-item' + (existingLimit > 0 ? ' has-slots' : '');
+            item.innerHTML = `
+                <span class="time-slot-label">${slot.label}</span>
+                <input type="number" class="time-slot-input" 
+                       data-time="${slot.value}" 
+                       min="0" max="50" 
+                       value="${existingLimit}"
+                       onchange="updateTimeSlotAllocation(this)"
+                       onfocus="this.select()">
+            `;
+            grid.appendChild(item);
+        });
+        
+        updateSlotDistributionSummary(totalSlots);
+    }
+    
+    function updateTimeSlotAllocation(input) {
+        const item = input.closest('.time-slot-item');
+        const value = parseInt(input.value) || 0;
+        
+        if (value > 0) {
+            item.classList.add('has-slots');
+        } else {
+            item.classList.remove('has-slots');
+        }
+        
+        const totalSlots = parseInt(document.getElementById('slotLimitInput').value) || 10;
+        updateSlotDistributionSummary(totalSlots);
+    }
+    
+    function updateSlotDistributionSummary(totalSlots) {
+        const inputs = document.querySelectorAll('.time-slot-input');
+        let allocated = 0;
+        
+        inputs.forEach(input => {
+            allocated += parseInt(input.value) || 0;
+        });
+        
+        const summary = document.getElementById('slotDistributionSummary');
+        const allocatedSpan = summary.querySelector('.allocated-count');
+        const remainingSpan = summary.querySelector('.remaining-count');
+        
+        allocatedSpan.innerHTML = `Allocated: <strong>${allocated}</strong>`;
+        remainingSpan.innerHTML = `/ Total: <strong>${totalSlots}</strong>`;
+        
+        if (allocated > totalSlots) {
+            allocatedSpan.classList.add('over-limit');
+        } else {
+            allocatedSpan.classList.remove('over-limit');
         }
     }
 
@@ -2157,6 +2681,9 @@ try {
                 btn.classList.add('active');
             }
         });
+        
+        // Update distribution summary
+        updateSlotDistributionSummary(value);
     }
 
     async function saveAvailability() {
@@ -2168,6 +2695,18 @@ try {
         const isAvailable = currentAvailabilityType === 'available';
         const slotLimit = parseInt(document.getElementById('slotLimitInput').value) || availabilityData.defaultSlotLimit;
         
+        // Collect time slot limits
+        const timeSlotLimits = {};
+        if (isAvailable) {
+            document.querySelectorAll('.time-slot-input').forEach(input => {
+                const time = input.dataset.time;
+                const limit = parseInt(input.value) || 0;
+                if (limit > 0) {
+                    timeSlotLimits[time] = limit;
+                }
+            });
+        }
+        
         try {
             const response = await fetch('/connect/api/availability/save.php', {
                 method: 'POST',
@@ -2177,7 +2716,8 @@ try {
                 body: JSON.stringify({
                     date: selectedAvailabilityDate,
                     is_available: isAvailable,
-                    slot_limit: slotLimit
+                    slot_limit: slotLimit,
+                    time_slot_limits: timeSlotLimits
                 })
             });
             
@@ -2188,6 +2728,7 @@ try {
                 if (result.data) {
                     availabilityData.unavailableDates = result.data.unavailableDates || [];
                     availabilityData.slotLimits = result.data.slotLimits || {};
+                    availabilityData.timeSlotLimits = result.data.timeSlotLimits || {};
                 } else {
                     // Fallback: update manually if no data returned
                     if (!isAvailable) {
@@ -2195,12 +2736,14 @@ try {
                             availabilityData.unavailableDates.push(selectedAvailabilityDate);
                         }
                         delete availabilityData.slotLimits[selectedAvailabilityDate];
+                        delete availabilityData.timeSlotLimits[selectedAvailabilityDate];
                     } else {
                         const index = availabilityData.unavailableDates.indexOf(selectedAvailabilityDate);
                         if (index > -1) {
                             availabilityData.unavailableDates.splice(index, 1);
                         }
                         availabilityData.slotLimits[selectedAvailabilityDate] = slotLimit;
+                        availabilityData.timeSlotLimits[selectedAvailabilityDate] = timeSlotLimits;
                     }
                 }
                 
@@ -2450,10 +2993,13 @@ try {
     });
 
     // Function to update status with toast notification
-    function updateStatus(id, status) {
+    function updateStatus(id, status, patientId = null) {
         let confirmMessage = 'Are you sure you want to mark this appointment as ' + status + '?';
         if (status === 'Confirmed') {
             confirmMessage = 'Confirm this appointment and send SMS notification to the patient?';
+        }
+        if (status === 'Done') {
+            confirmMessage = 'Mark this appointment as Done and add medical record for the patient?';
         }
         
         if (confirm(confirmMessage)) {
@@ -2476,6 +3022,14 @@ try {
             .then(data => {
                 if (data.success) {
                     showToast(data.message, 'success');
+                    
+                    // If status is Done, redirect to add medical record page
+                    if (status === 'Done' && patientId) {
+                        setTimeout(() => {
+                            window.location.href = '/connect/pages/health_worker/add_medical_record.php?patient_id=' + patientId + '&appointment_id=' + id;
+                        }, 1000);
+                        return;
+                    }
                     
                     // If there's an SMS result, show it as well
                     if (data.sms_result) {
@@ -2538,6 +3092,40 @@ try {
             .catch(error => {
                 console.error('Error:', error);
                 showToast('An error occurred while sending the SMS reminder', 'error');
+            });
+        }
+    }
+    
+    // Function to send follow-up reminder SMS
+    function sendFollowUpReminder(recordId, patientName) {
+        if (confirm('Send a follow-up checkup reminder SMS to ' + patientName + '?')) {
+            // Show loading state
+            showToast('Sending follow-up reminder...', 'info');
+            
+            fetch('/connect/api/medical_records/send_follow_up_reminder.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    record_id: recordId
+                }),
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('✓ ' + data.message, 'success');
+                    // Auto reload after sending SMS
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showToast(data.message, 'warning');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('An error occurred while sending the follow-up reminder', 'error');
             });
         }
     }

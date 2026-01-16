@@ -31,6 +31,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'add_record':
                 // Add new medical record
                 try {
+                    $has_follow_up = isset($_POST['has_follow_up']) && $_POST['has_follow_up'] === 'yes';
+                    $follow_up_date = $has_follow_up ? ($_POST['follow_up_date'] ?? null) : null;
+                    $follow_up_message = $has_follow_up ? ($_POST['follow_up_message'] ?? null) : null;
+                    $notes = $_POST['notes'] ?? '';
+                    
+                    // Combine notes with follow-up message using JSON structure
+                    $notes_data = [
+                        'notes' => $notes,
+                        'follow_up_message' => $follow_up_message ?? ''
+                    ];
+                    $combined_notes = json_encode($notes_data);
+                    
                     $query = "INSERT INTO medical_records (patient_id, health_worker_id, visit_date, chief_complaint, 
                              diagnosis, treatment, prescription, notes, follow_up_date) 
                              VALUES (:patient_id, :health_worker_id, :visit_date, :chief_complaint, 
@@ -44,9 +56,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':diagnosis' => $_POST['diagnosis'],
                         ':treatment' => $_POST['treatment'],
                         ':prescription' => $_POST['prescription'],
-                        ':notes' => $_POST['notes'],
-                        ':follow_up_date' => $_POST['follow_up_date']
+                        ':notes' => $combined_notes,
+                        ':follow_up_date' => $follow_up_date
                     ]);
+                    
+                    // Send SMS notification for follow-up if applicable
+                    if ($has_follow_up && !empty($follow_up_date)) {
+                        // Get patient's mobile number
+                        $query = "SELECT u.mobile_number, u.first_name FROM patients p 
+                                  JOIN users u ON p.user_id = u.user_id 
+                                  WHERE p.patient_id = ?";
+                        $stmt = $conn->prepare($query);
+                        $stmt->execute([$_POST['patient_id']]);
+                        $patient_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if (!empty($patient_data['mobile_number'])) {
+                            require_once __DIR__ . '/../../includes/sms.php';
+                            
+                            // Check if SMS notifications are enabled
+                            $query = "SELECT value FROM settings WHERE name = 'enable_sms_notifications'";
+                            $stmt = $conn->query($query);
+                            $sms_enabled = $stmt->fetchColumn();
+                            
+                            if ($sms_enabled == '1') {
+                                $formatted_date = date('F j, Y', strtotime($follow_up_date));
+                                $patient_name = $patient_data['first_name'];
+                                $custom_message = !empty($follow_up_message) ? " Doctor's note: " . $follow_up_message : "";
+                                
+                                $message = "Hello {$patient_name}, you have a scheduled follow-up checkup on {$formatted_date} at Brgy. Poblacion Health Center.{$custom_message} Thank you. - Respective Personnel";
+                                
+                                sendSMS($patient_data['mobile_number'], $message);
+                            }
+                        }
+                    }
+                    
                     $_SESSION['success'] = "Medical record added successfully.";
                     header('Location: ' . $_SERVER['PHP_SELF']);
                     exit();
@@ -1020,9 +1063,35 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <textarea id="notes" name="notes" class="form-control"></textarea>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="follow_up_date">Follow-up Date</label>
-                        <input type="date" id="follow_up_date" name="follow_up_date" class="form-control">
+                    <!-- Follow-up Checkup Section -->
+                    <div class="form-group" style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <label style="font-weight: 600; margin-bottom: 0.75rem; display: block;">
+                            <i class="fas fa-calendar-check" style="color: var(--primary-color);"></i>
+                            Follow-up Checkup
+                        </label>
+                        
+                        <div style="display: flex; gap: 1rem; margin-bottom: 0.75rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" name="has_follow_up" value="yes" id="modal_follow_up_yes" onchange="toggleModalFollowUpFields()">
+                                <span><i class="fas fa-check-circle" style="color: #4CAF50;"></i> Has Follow-up</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" name="has_follow_up" value="no" id="modal_follow_up_no" checked onchange="toggleModalFollowUpFields()">
+                                <span><i class="fas fa-times-circle" style="color: #f44336;"></i> No Follow-up</span>
+                            </label>
+                        </div>
+                        
+                        <div id="modal_follow_up_fields" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e0e0e0;">
+                            <div class="form-group">
+                                <label for="follow_up_date">Follow-up Date <span style="color: #dc3545;">*</span></label>
+                                <input type="date" id="follow_up_date" name="follow_up_date" class="form-control">
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 0.5rem;">
+                                <label for="follow_up_message">Doctor's Message (SMS will be sent)</label>
+                                <textarea id="follow_up_message" name="follow_up_message" class="form-control" placeholder="E.g., Please bring previous lab results..." rows="2"></textarea>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1296,6 +1365,23 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 }
             }
         });
+        
+        // Toggle follow-up fields in modal
+        function toggleModalFollowUpFields() {
+            const hasFollowUp = document.getElementById('modal_follow_up_yes').checked;
+            const followUpFields = document.getElementById('modal_follow_up_fields');
+            const followUpDateInput = document.getElementById('follow_up_date');
+            
+            if (hasFollowUp) {
+                followUpFields.style.display = 'block';
+                followUpDateInput.setAttribute('required', 'required');
+            } else {
+                followUpFields.style.display = 'none';
+                followUpDateInput.removeAttribute('required');
+                followUpDateInput.value = '';
+                document.getElementById('follow_up_message').value = '';
+            }
+        }
     </script>
     <?php 
     renderPsgcAddressStyles();

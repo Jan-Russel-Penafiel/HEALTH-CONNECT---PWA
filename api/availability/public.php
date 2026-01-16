@@ -80,6 +80,7 @@ try {
     
     $unavailableDates = [];
     $slotLimits = [];
+    $timeSlotLimits = [];
     $defaultSlotLimit = 10;
     
     if (file_exists($jsonFile)) {
@@ -89,12 +90,14 @@ try {
         if ($savedData) {
             $unavailableDates = $savedData['unavailableDates'] ?? [];
             $slotLimits = $savedData['slotLimits'] ?? [];
+            $timeSlotLimits = $savedData['timeSlotLimits'] ?? [];
             $defaultSlotLimit = $savedData['defaultSlotLimit'] ?? 10;
         }
     }
     
     // Get booked appointments with time slots from database
     $bookedAppointments = [];
+    $bookedCountsByTime = []; // Track bookings per date per time
     try {
         $query = "SELECT DATE(appointment_date) as date, appointment_time as time, status_id 
                   FROM appointments 
@@ -109,12 +112,20 @@ try {
             if (!isset($bookedAppointments[$date])) {
                 $bookedAppointments[$date] = [];
             }
+            if (!isset($bookedCountsByTime[$date])) {
+                $bookedCountsByTime[$date] = [];
+            }
             // Handle both TIME format from appointment_time column
             $time = $row['time'];
             if (strlen($time) > 5) {
                 $time = substr($time, 0, 5); // Convert HH:MM:SS to HH:MM
             }
             $bookedAppointments[$date][] = $time;
+            // Count bookings per time slot
+            if (!isset($bookedCountsByTime[$date][$time])) {
+                $bookedCountsByTime[$date][$time] = 0;
+            }
+            $bookedCountsByTime[$date][$time]++;
         }
     } catch (PDOException $e) {
         // Continue with empty booked data
@@ -143,8 +154,14 @@ try {
         'data' => [
             'unavailableDates' => $unavailableDates,
             'slotLimits' => !empty($slotLimits) ? (object)$slotLimits : new stdClass(),
+            'timeSlotLimits' => !empty($timeSlotLimits) ? (object)array_map(function($slots) {
+                return (object)$slots;
+            }, $timeSlotLimits) : new stdClass(),
             'bookedSlots' => !empty($bookedCounts) ? (object)$bookedCounts : new stdClass(),
             'bookedTimes' => !empty($bookedAppointments) ? (object)$bookedAppointments : new stdClass(),
+            'bookedCountsByTime' => !empty($bookedCountsByTime) ? (object)array_map(function($times) {
+                return (object)$times;
+            }, $bookedCountsByTime) : new stdClass(),
             'defaultSlotLimit' => $defaultSlotLimit,
             'timeSlots' => $timeSlots,
             'workingHours' => $workingHours

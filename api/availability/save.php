@@ -76,6 +76,7 @@ try {
     $existingData = [
         'unavailableDates' => [],
         'slotLimits' => [],
+        'timeSlotLimits' => [], // Per-time-slot limits: date => [time => limit]
         'defaultSlotLimit' => 10,
         'lastUpdated' => null
     ];
@@ -85,6 +86,10 @@ try {
         $savedData = json_decode($jsonContent, true);
         if ($savedData) {
             $existingData = array_merge($existingData, $savedData);
+            // Ensure timeSlotLimits exists
+            if (!isset($existingData['timeSlotLimits'])) {
+                $existingData['timeSlotLimits'] = [];
+            }
         }
     }
     
@@ -108,6 +113,7 @@ try {
             }
             // Remove from slot limits
             unset($existingData['slotLimits'][$date]);
+            unset($existingData['timeSlotLimits'][$date]);
         } else {
             // Remove from unavailable dates
             $existingData['unavailableDates'] = array_values(array_filter(
@@ -116,6 +122,16 @@ try {
             ));
             // Set slot limit
             $existingData['slotLimits'][$date] = (int)$slotLimit;
+            
+            // Handle time slot limits if provided
+            if (isset($input['time_slot_limits']) && is_array($input['time_slot_limits'])) {
+                $existingData['timeSlotLimits'][$date] = [];
+                foreach ($input['time_slot_limits'] as $time => $limit) {
+                    if (preg_match('/^\d{2}:\d{2}$/', $time) && (int)$limit > 0) {
+                        $existingData['timeSlotLimits'][$date][$time] = (int)$limit;
+                    }
+                }
+            }
         }
     }
     // Handle bulk update (if sending full arrays)
